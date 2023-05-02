@@ -57,6 +57,11 @@ int zcoord(int gridPoint)
     //return (gridPoint - xcoord(gridPoint) - gridSize*ycoord(gridPoint))/gridSize/gridSize;
     return gridPoint/gridSize/gridSize;
     }
+    
+int getGridPoint(int x, int y, int z)
+    {
+    return z*gridSize*gridSize + y*gridSize + x;
+    }
 
 tuple<double,double,double> findPosition(int gridPoint)
 	{
