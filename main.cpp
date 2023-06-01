@@ -49,6 +49,8 @@ int main(int inputN,char *inputV[]) {
 	cellSize = pow(1/double(totalNumSpins),1./3.);
 	if(gridSize<10) gridSize=2*int(pow(double(totalNumSpins),1./3.)+EPS)+2*int(2*d/cellSize+EPS);
 	gridVolume = gridSize*gridSize*gridSize;
+    // one factor of 1/2 is already taken care of by avoiding double counting
+    double probabilityNormFactor = 1/2./PI/d/d/pow(double(totalNumSpins),5./3.);
     
 	gsl_rng * RNG = gsl_rng_alloc (gsl_rng_mt19937);
 	gsl_rng_set (RNG, seed);
@@ -249,6 +251,8 @@ int main(int inputN,char *inputV[]) {
 	result << endl;
 	result << "final energy: " << energy << endl;
 	result << "best energy: " << bestenergy << endl;
+    result << "final probability: " << energy*probabilityNormFactor << endl;
+    result << "best probability: " << bestenergy*probabilityNormFactor << endl;
 	result << endl;
     
     ofstream finconf("finconf.dat");
