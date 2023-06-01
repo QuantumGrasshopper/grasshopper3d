@@ -27,6 +27,7 @@ extern double cellSize;
 extern unsigned int gridSize;
 extern unsigned int gridVolume;
 extern double tempScaling;
+extern int deltaOption;
 
 double get_option(int inputN,char *inputV[], const char *was);
 std::string get_string_option(int inputN,char *inputV[], const char *was);

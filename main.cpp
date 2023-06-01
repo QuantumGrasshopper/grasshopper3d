@@ -7,6 +7,7 @@ double cellSize;
 unsigned int gridSize;
 unsigned int gridVolume;
 double tempScaling;
+int deltaOption;
 
 using namespace std; 
 
@@ -34,6 +35,7 @@ int main(int inputN,char *inputV[]) {
 	gridSize=get_option(inputN,inputV,"gridsize");
 	long unsigned int seed=get_option(inputN,inputV,"randomseed");
 	string initconf=get_string_option(inputN,inputV,"initconf");
+    deltaOption=get_option(inputN,inputV,"delta");
 	
 	maxtime=60*60*maxtime*1000;
 	if(totalNumSpins<100) totalNumSpins=5000;
@@ -67,6 +69,7 @@ int main(int inputN,char *inputV[]) {
 	result << "Size of cell: " << cellSize << endl;
 	result << endl;
 	result << "Random seed: " << seed << endl;
+    result << "Option for delta-function discretization: " << deltaOption << endl;
 	result << "Initial temperature: " << temperature << endl;
 	result << "Final temperature: " << finaltemperature << endl;
 	result << "Temperature scaling factor: " << tempScaling << endl;
