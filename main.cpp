@@ -55,6 +55,7 @@ int main(int inputN,char *inputV[]) {
     double probabilityNormFactor = 1/2./PI/d/d/pow(double(totalNumSpins),5./3.);
     
 	gsl_rng * RNG = gsl_rng_alloc (gsl_rng_mt19937);
+    if(seed==0) seed=std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	gsl_rng_set (RNG, seed);
 	
 	unsigned int temproundcounter=0;
