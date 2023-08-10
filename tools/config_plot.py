@@ -1,13 +1,19 @@
+#!/usr/bin/python3
+
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
+# quick plot saved spin configuration
+# no transparency, cannot see inside configuration
+
 inputfile = input("Name of file containing spin configuration: ")
-gridsize = int(input("Grid size: "))
 
 data = np.genfromtxt(inputfile, dtype = int)
 
-numberspins = len(data)
+with open("result.dat") as f:
+    lines = f.readlines()
+    gridsize = int(lines[4].strip().split(" ")[-1])
 
 z = data//gridsize//gridsize
 y = data//gridsize - z*gridsize
