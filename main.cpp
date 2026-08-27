@@ -1,6 +1,7 @@
 #include "utilities.hpp"
 #include "setup.hpp"
 #include "annealing.hpp"
+#include "interactions.hpp"
 
 #include <cstdint>
 #include <limits>
@@ -13,13 +14,6 @@ double tempScaling;
 int deltaOption;
 
 using namespace std; 
-
-struct gridcell {
-    int x;
-    int y;
-    int z;
-    double energy;    
-};
 
 namespace {
 
@@ -55,16 +49,6 @@ unsigned int checkedGridVolume(unsigned int inputGridSize)
         throw invalid_argument("Grid volume is outside the supported storage range.");
 
     return static_cast<unsigned int>(volume);
-    }
-
-void validateInteractionTemplateReach(double distance)
-    {
-    // The centered template must contain every displacement with
-    // |r-distance| < 2*cellSize. Its shorter reach controls both even and odd grids.
-    const unsigned int templateReach=(gridSize-1)/2;
-    const double requiredReach=ceil(distance/cellSize)+1.;
-    if(double(templateReach)<requiredReach)
-        throw invalid_argument("Grid size is too small for the requested interaction-distance support.");
     }
 
 }
@@ -136,30 +120,8 @@ int main(int inputN,char *inputV[]) {
     
     // CONSTRUCT NEIGHBOR TEMPLATE ---------------------------------------------------------------------------  
     
-    vector< gridcell > dNeighbourTemplate;
-    
-    double thisEnergyContribution;
-    const int centerCoordinate=static_cast<int>(gridSize/2);
-    tuple<int,int,int> centerPosition=make_tuple(centerCoordinate,centerCoordinate,centerCoordinate);
-    for(unsigned int i=0;i<gridSize;i++) 
-        {
-        for(unsigned int j=0;j<gridSize;j++)
-            {
-            for(unsigned int n=0;n<gridSize;n++)
-                {
-                thisEnergyContribution=contributionEnergy(d,euclideanDistance(centerPosition,make_tuple(i,j,n)));
-                if(thisEnergyContribution > EPS)
-                    {
-                    gridcell this_cell;
-                    this_cell.x = static_cast<int>(i)-centerCoordinate;
-                    this_cell.y = static_cast<int>(j)-centerCoordinate;
-                    this_cell.z = static_cast<int>(n)-centerCoordinate;
-                    this_cell.energy = thisEnergyContribution;
-                    dNeighbourTemplate.push_back(this_cell);
-                    }
-                }
-            }
-        }
+	GrasshopperInteractionTemplate interactionTemplate=buildInteractionTemplate(d);
+	const int signedGridSize=static_cast<int>(gridSize);
 		
     auto now = chrono::high_resolution_clock::now();
     auto timeDiff = chrono::duration_cast<chrono::milliseconds>(now-begin).count();
@@ -168,14 +130,12 @@ int main(int inputN,char *inputV[]) {
     // INITIAL SPIN CONFIGURATION ------------------------------------------------------------------------
     
     vector<unsigned char> grid(gridVolume);			//true if spin=1 at this grid point
-    vector<double> energyGrid(gridVolume);
 	vector<int> spinArray(totalNumSpins);				 //grid point where any spin is
 	vector<int> noSpinArray(gridVolume-totalNumSpins);	 //complementary to above: grid point where no spin is
 
     initialize(grid.data(), spinArray.data(), RNG, initconf);
     
     unsigned int noSpinCounter=0;
-    double energy = 0;
     for(unsigned int i=0;i<gridSize;i++) 
         {
         for(unsigned int j=0;j<gridSize;j++)
@@ -184,24 +144,12 @@ int main(int inputN,char *inputV[]) {
                 {
                 const int gridPoint=getGridPoint(i,j,n);
                 if(grid[gridPoint]==false) {noSpinArray[noSpinCounter]=gridPoint; noSpinCounter++;}
-                // Fill the energy grid
-                energyGrid[gridPoint]=0;
-                for(unsigned int k=0;k<dNeighbourTemplate.size();k++)
-                    {
-                    int x = dNeighbourTemplate[k].x  +i;
-                    int y = dNeighbourTemplate[k].y  +j;
-                    int z = dNeighbourTemplate[k].z  +n;
-                    if(x >= 0 && y >= 0 && z >=0 && x < gridSize && y < gridSize && z < gridSize)
-                        {
-                        if(grid[getGridPoint(x,y,z)]==true)
-                            {energyGrid[gridPoint]+=dNeighbourTemplate[k].energy;}
-                        }
-                    }
-                if(grid[gridPoint]==true) energy += energyGrid[gridPoint];
                 }
             }
         }
-    energy = energy/2.;
+
+	vector<double> energyGrid=buildGrasshopperInteractionGrid(grid.data(),interactionTemplate);
+	double energy=totalGrasshopperInteraction(grid.data(),energyGrid);
 		
     ofstream energies("energies.dat");
 	ofstream temperatures("temperatures.dat");
@@ -244,21 +192,23 @@ int main(int inputN,char *inputV[]) {
 			energy+=energyDifference;
         
             //update energy grid                
-            for(unsigned int j=0;j<dNeighbourTemplate.size();j++)
+            for(unsigned int j=0;j<interactionTemplate.size();j++)
                 {
-                int x = dNeighbourTemplate[j].x  +xcoord(oldSpinCoord);
-                int y = dNeighbourTemplate[j].y  +ycoord(oldSpinCoord);
-                int z = dNeighbourTemplate[j].z  +zcoord(oldSpinCoord);
-                if(x >= 0 && y >= 0 && z >=0 && x < gridSize && y < gridSize && z < gridSize)
+                int x = interactionTemplate[j].dx+xcoord(oldSpinCoord);
+                int y = interactionTemplate[j].dy+ycoord(oldSpinCoord);
+                int z = interactionTemplate[j].dz+zcoord(oldSpinCoord);
+                if(x >= 0 && y >= 0 && z >=0
+                   && x < signedGridSize && y < signedGridSize && z < signedGridSize)
                     {
-                    energyGrid[getGridPoint(x,y,z)] -= dNeighbourTemplate[j].energy;
+                    energyGrid[getGridPoint(x,y,z)] -= interactionTemplate[j].contribution;
                     }
-                x = dNeighbourTemplate[j].x  +xcoord(newSpinCoord);
-                y = dNeighbourTemplate[j].y  +ycoord(newSpinCoord);
-                z = dNeighbourTemplate[j].z  +zcoord(newSpinCoord);
-                if(x >= 0 && y >= 0 && z >=0 && x < gridSize && y < gridSize && z < gridSize)
+                x = interactionTemplate[j].dx+xcoord(newSpinCoord);
+                y = interactionTemplate[j].dy+ycoord(newSpinCoord);
+                z = interactionTemplate[j].dz+zcoord(newSpinCoord);
+                if(x >= 0 && y >= 0 && z >=0
+                   && x < signedGridSize && y < signedGridSize && z < signedGridSize)
                     {
-                    energyGrid[getGridPoint(x,y,z)] += dNeighbourTemplate[j].energy;
+                    energyGrid[getGridPoint(x,y,z)] += interactionTemplate[j].contribution;
                     }
                 }
                 

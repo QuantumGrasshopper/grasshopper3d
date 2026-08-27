@@ -9,7 +9,7 @@ CXXFLAGS = -O3 -Wall -std=c++17
 LDFLAGS = -lgsl -lgslcblas -lm
 PYTHON ?= python3
 
-OBJS = main.o utilities.o setup.o annealing.o
+OBJS = main.o utilities.o interactions.o setup.o annealing.o
 TEST_BIN = tests/grasshopper_tests
 TEST_SRCS = tests/test_main.cpp \
 		tests/test_globals.cpp \
@@ -25,10 +25,12 @@ $(TEST_BIN): $(TEST_OBJS) $(TEST_PRODUCTION_OBJS)
 	$(LD) $(TEST_OBJS) $(TEST_PRODUCTION_OBJS) -o $(TEST_BIN) $(LDFLAGS)
 
 # create .o-files from .cpp-files using g++
-main.o: main.cpp utilities.hpp setup.hpp annealing.hpp
+main.o: main.cpp utilities.hpp setup.hpp annealing.hpp interactions.hpp
 	$(CXX) $(CXXFLAGS) -c main.cpp
 utilities.o: utilities.cpp utilities.hpp
 	$(CXX) $(CXXFLAGS) -c utilities.cpp
+interactions.o: interactions.cpp interactions.hpp utilities.hpp
+	$(CXX) $(CXXFLAGS) -c interactions.cpp
 setup.o: setup.cpp setup.hpp utilities.hpp
 	$(CXX) $(CXXFLAGS) -c setup.cpp
 annealing.o: annealing.cpp annealing.hpp utilities.hpp
