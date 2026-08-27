@@ -73,7 +73,9 @@ int main(int inputN,char *inputV[]) {
     deltaOption=parameters.deltaOption;
 
 	tempScaling=pow((finaltemperature/temperature),1./double(numberannealingsteps));
-	int outputconfigbeforetherm=numberannealingsteps/100; int annealingcounter=0; int maxoutputconfigs=200;	//for output config dat
+	int outputconfigbeforetherm=numberannealingsteps/100;
+	if(outputconfigbeforetherm<1) outputconfigbeforetherm=1;
+	int annealingcounter=0; int maxoutputconfigs=200;	//for output config dat
 	
 	cellSize = pow(1/double(totalNumSpins),1./3.);
 	if(parameters.gridSize.has_value()) gridSize=*parameters.gridSize;
@@ -258,12 +260,16 @@ int main(int inputN,char *inputV[]) {
 		}
 		
     // WRAP UP --------------------------------------------------------------------------------------------
+
+	const long totalAccepted=accepted+accepted_current;
+	const double averageAcceptanceRatio=
+		counter>0 ? totalAccepted/double(counter) : 0.0;
     
     result << endl;
 	result << "Simulation took " << timeDiff/60./1000 << " minutes" << endl;
 	result << "Finished after " << counter << " steps" << endl;
 	result << "Final temperature: " << temperature << endl;
-	result << "Average acceptance ratio: " << accepted/double(counter) << endl;
+	result << "Average acceptance ratio: " << averageAcceptanceRatio << endl;
 	result << endl;
 	result << "final energy: " << energy << endl;
 	result << "best energy: " << bestenergy << endl;

@@ -192,6 +192,7 @@ def run_probability_case(executable, grid_size, hopping_distance, delta_option):
             .read_text(encoding="utf-8").splitlines()[0])
         reported_energy = float(result_values["final energy"])
         reported_probability = float(result_values["final probability"])
+        reported_acceptance = float(result_values["Average acceptance ratio"])
 
         require_current_precision(
             initial_energy, reference_energy, "initial reported energy")
@@ -200,6 +201,8 @@ def run_probability_case(executable, grid_size, hopping_distance, delta_option):
         require_current_precision(
             reported_probability, reference_probability,
             "zero-step result probability")
+        require(math.isfinite(reported_acceptance) and reported_acceptance == 0.0,
+                "zero-step acceptance ratio was not reported as zero")
 
 
 def run_rejection_case(executable, total_spins, grid_size, hopping_distance,
@@ -238,6 +241,79 @@ def run_malformed_cli_preserves_result(executable):
         require(completed.returncode != 0, "malformed CLI input was accepted")
         require(result_path.read_text(encoding="utf-8") == original_contents,
                 "malformed CLI input changed existing result.dat")
+
+
+def small_annealing_command(executable, initialization, temperature_round_steps,
+                            annealing_steps):
+    return [
+        str(executable),
+        "-N", "2",
+        "-gridsize", "5",
+        "-d", "0.1",
+        "-hours", "1",
+        "-steps", "1",
+        "-tempsteps", str(temperature_round_steps),
+        "-inittemp", "1",
+        "-fintemp", "0.1",
+        "-annealsteps", str(annealing_steps),
+        "-initconf", initialization,
+        "-delta", "0",
+        "-randomseed", "12345",
+    ]
+
+
+def run_short_annealing_schedule(executable):
+    with tempfile.TemporaryDirectory(
+            prefix="grasshopper3d-short-annealing-") as directory:
+        completed = subprocess.run(
+            small_annealing_command(executable, "random", 1, 1),
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        require(completed.returncode == 0,
+                f"short annealing schedule failed: {completed.stderr}")
+        result_text = (pathlib.Path(directory) / "result.dat").read_text(
+            encoding="utf-8")
+        require("Finished after 1 steps" in result_text,
+                "short annealing schedule did not complete its proposal")
+
+
+def run_partial_round_acceptance_case(executable):
+    with tempfile.TemporaryDirectory(
+            prefix="grasshopper3d-partial-acceptance-") as directory:
+        working_directory = pathlib.Path(directory)
+        initial_coordinates = [0, 1]
+        (working_directory / "initconf.dat").write_text(
+            "".join(f"{coordinate}\n" for coordinate in initial_coordinates),
+            encoding="utf-8")
+
+        completed = subprocess.run(
+            small_annealing_command(executable, "load", 10, 100),
+            cwd=working_directory,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        require(completed.returncode == 0,
+                f"partial-round run failed: {completed.stderr}")
+
+        result_path = working_directory / "result.dat"
+        result_values = read_result_values(result_path)
+        require("Finished after 1 steps" in result_path.read_text(encoding="utf-8"),
+                "partial-round run did not stop after one proposal")
+        final_coordinates = [
+            int(value) for value in
+            (working_directory / "finconf.dat")
+            .read_text(encoding="utf-8").split()
+        ]
+        accepted_moves = int(set(final_coordinates) != set(initial_coordinates))
+        reported_acceptance = float(result_values["Average acceptance ratio"])
+        require(reported_acceptance == float(accepted_moves),
+                "partial-round acceptance ratio disagrees with configuration change")
 
 
 def main():
@@ -281,6 +357,12 @@ def main():
 
         with suite.case("malformed CLI preserves existing result.dat"):
             run_malformed_cli_preserves_result(executable)
+
+        with suite.case("short positive annealing schedule"):
+            run_short_annealing_schedule(executable)
+
+        with suite.case("final partial-round acceptance accounting"):
+            run_partial_round_acceptance_case(executable)
     except Exception as error:
         suite.failures.append(("integration test harness", error))
 

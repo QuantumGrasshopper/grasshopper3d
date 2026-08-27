@@ -15,9 +15,10 @@ TEST_SRCS = tests/test_main.cpp \
 		tests/test_globals.cpp \
 		tests/test_utilities.cpp \
 		tests/test_parameters.cpp \
-		tests/test_setup.cpp
+		tests/test_setup.cpp \
+		tests/test_annealing.cpp
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
-TEST_PRODUCTION_OBJS = utilities.o parameters.o setup.o
+TEST_PRODUCTION_OBJS = utilities.o parameters.o setup.o annealing.o
 
 # link .o-files to program
 grasshopper:  $(OBJS)
@@ -40,7 +41,7 @@ setup.o: setup.cpp setup.hpp utilities.hpp
 annealing.o: annealing.cpp annealing.hpp utilities.hpp
 	$(CXX) $(CXXFLAGS) -c annealing.cpp
 
-tests/%.o: tests/%.cpp tests/doctest/doctest.h utilities.hpp parameters.hpp setup.hpp
+tests/%.o: tests/%.cpp tests/doctest/doctest.h utilities.hpp parameters.hpp setup.hpp annealing.hpp
 	$(CXX) $(CXXFLAGS) -I. -Itests -c $< -o $@
 
 test: $(TEST_BIN)
