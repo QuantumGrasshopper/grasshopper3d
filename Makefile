@@ -9,13 +9,15 @@ CXXFLAGS = -O3 -Wall -std=c++17
 LDFLAGS = -lgsl -lgslcblas -lm
 PYTHON ?= python3
 
-OBJS = main.o utilities.o interactions.o setup.o annealing.o
+OBJS = main.o utilities.o interactions.o parameters.o setup.o annealing.o
 TEST_BIN = tests/grasshopper_tests
 TEST_SRCS = tests/test_main.cpp \
 		tests/test_globals.cpp \
-		tests/test_utilities.cpp
+		tests/test_utilities.cpp \
+		tests/test_parameters.cpp \
+		tests/test_setup.cpp
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
-TEST_PRODUCTION_OBJS = utilities.o
+TEST_PRODUCTION_OBJS = utilities.o parameters.o setup.o
 
 # link .o-files to program
 grasshopper:  $(OBJS)
@@ -25,18 +27,20 @@ $(TEST_BIN): $(TEST_OBJS) $(TEST_PRODUCTION_OBJS)
 	$(LD) $(TEST_OBJS) $(TEST_PRODUCTION_OBJS) -o $(TEST_BIN) $(LDFLAGS)
 
 # create .o-files from .cpp-files using g++
-main.o: main.cpp utilities.hpp setup.hpp annealing.hpp interactions.hpp
+main.o: main.cpp utilities.hpp setup.hpp annealing.hpp interactions.hpp parameters.hpp
 	$(CXX) $(CXXFLAGS) -c main.cpp
 utilities.o: utilities.cpp utilities.hpp
 	$(CXX) $(CXXFLAGS) -c utilities.cpp
 interactions.o: interactions.cpp interactions.hpp utilities.hpp
 	$(CXX) $(CXXFLAGS) -c interactions.cpp
+parameters.o: parameters.cpp parameters.hpp
+	$(CXX) $(CXXFLAGS) -c parameters.cpp
 setup.o: setup.cpp setup.hpp utilities.hpp
 	$(CXX) $(CXXFLAGS) -c setup.cpp
 annealing.o: annealing.cpp annealing.hpp utilities.hpp
 	$(CXX) $(CXXFLAGS) -c annealing.cpp
 
-tests/%.o: tests/%.cpp tests/doctest/doctest.h utilities.hpp
+tests/%.o: tests/%.cpp tests/doctest/doctest.h utilities.hpp parameters.hpp setup.hpp
 	$(CXX) $(CXXFLAGS) -I. -Itests -c $< -o $@
 
 test: $(TEST_BIN)

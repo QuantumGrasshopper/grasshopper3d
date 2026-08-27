@@ -2,6 +2,7 @@
 #include "setup.hpp"
 #include "annealing.hpp"
 #include "interactions.hpp"
+#include "parameters.hpp"
 
 #include <cstdint>
 #include <limits>
@@ -54,46 +55,43 @@ unsigned int checkedGridVolume(unsigned int inputGridSize)
 }
 
 int main(int inputN,char *inputV[]) {
+    try {
     
     // SETUP -------------------------------------------------------------------------------------
-    
-    ofstream result("result.dat");
-	
-	double d=get_option(inputN,inputV,"d");					//grasshopper hopping distance
-	double maxtime=get_option(inputN,inputV,"hours");
-	long unsigned int maxsteps=get_option(inputN,inputV,"steps");
-	long unsigned int temproundsteps=get_option(inputN,inputV,"tempsteps");
-	double temperature=get_option(inputN,inputV,"inittemp");
-	double finaltemperature=get_option(inputN,inputV,"fintemp");
-	int numberannealingsteps=get_option(inputN,inputV,"annealsteps");
-	totalNumSpins=get_option(inputN,inputV,"N");
-	gridSize=get_option(inputN,inputV,"gridsize");
-	long unsigned int seed=get_option(inputN,inputV,"randomseed");
-	string initconf=get_string_option(inputN,inputV,"initconf");
-    deltaOption=get_option(inputN,inputV,"delta");
-	
-	maxtime=60*60*maxtime*1000;
-	if(totalNumSpins<100) totalNumSpins=5000;
-	if(maxsteps==0) maxsteps=1e12;
-	if(temproundsteps>maxsteps) temproundsteps=int(maxsteps/1000.);
-	if(temproundsteps<10) temproundsteps=totalNumSpins;
-	if(temperature<EPS) temperature=25.;
-	if(finaltemperature<EPS) finaltemperature=0.1;
-	if(numberannealingsteps<EPS) numberannealingsteps=1000;
+
+	const SimulationParameters parameters=parseSimulationParameters(inputN,inputV);
+	double d=parameters.hoppingDistance;					//grasshopper hopping distance
+	double maxtime=60*60*parameters.hours*1000;
+	long unsigned int maxsteps=parameters.maxSteps;
+	totalNumSpins=parameters.totalNumSpins;
+	long unsigned int temproundsteps=
+		parameters.temperatureRoundSteps.value_or(totalNumSpins);
+	double temperature=parameters.initialTemperature;
+	double finaltemperature=parameters.finalTemperature;
+	int numberannealingsteps=parameters.annealingSteps;
+	string initconf=parameters.initialConfiguration;
+    deltaOption=parameters.deltaOption;
+
 	tempScaling=pow((finaltemperature/temperature),1./double(numberannealingsteps));
 	int outputconfigbeforetherm=numberannealingsteps/100; int annealingcounter=0; int maxoutputconfigs=200;	//for output config dat
 	
 	cellSize = pow(1/double(totalNumSpins),1./3.);
-	if(gridSize<10) gridSize=automaticGridSize(totalNumSpins,d);
+	if(parameters.gridSize.has_value()) gridSize=*parameters.gridSize;
+	else gridSize=automaticGridSize(totalNumSpins,d);
 	gridVolume = checkedGridVolume(gridSize);
 	if(totalNumSpins==0 || totalNumSpins>=gridVolume)
 		throw invalid_argument("Number of spins must satisfy 0 < N < grid volume.");
 	validateInteractionTemplateReach(d);
     // one factor of 1/2 is already taken care of by avoiding double counting
     double probabilityNormFactor = 1/2./PI/d/d/pow(double(totalNumSpins),5./3.);
+
+	long unsigned int seed;
+	if(parameters.randomSeed.has_value()) seed=*parameters.randomSeed;
+    else seed=std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    ofstream result("result.dat");
     
 	gsl_rng * RNG = gsl_rng_alloc (gsl_rng_mt19937);
-    if(seed==0) seed=std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	gsl_rng_set (RNG, seed);
 	
 	unsigned int temproundcounter=0;
@@ -143,10 +141,18 @@ int main(int inputN,char *inputV[]) {
             for(unsigned int n=0;n<gridSize;n++)
                 {
                 const int gridPoint=getGridPoint(i,j,n);
-                if(grid[gridPoint]==false) {noSpinArray[noSpinCounter]=gridPoint; noSpinCounter++;}
+                if(grid[gridPoint]==false)
+                    {
+                    if(noSpinCounter>=noSpinArray.size())
+                        throw logic_error("Initialization produced an incorrect number of empty grid cells.");
+                    noSpinArray[noSpinCounter]=gridPoint;
+                    noSpinCounter++;
+                    }
                 }
             }
         }
+	if(noSpinCounter!=noSpinArray.size())
+		throw logic_error("Initialization produced an incorrect number of empty grid cells.");
 
 	vector<double> energyGrid=buildGrasshopperInteractionGrid(grid.data(),interactionTemplate);
 	double energy=totalGrasshopperInteraction(grid.data(),energyGrid);
@@ -271,4 +277,9 @@ int main(int inputN,char *inputV[]) {
     saveConfig(bestSpinArray.data(), bestconf);
     
     return 0;
+    }
+    catch (const exception& error) {
+        cerr << "Error: " << error.what() << endl;
+        return 1;
+    }
 }

@@ -219,6 +219,27 @@ def run_rejection_case(executable, total_spins, grid_size, hopping_distance,
                 f"expected error {expected_error!r}; stderr was {completed.stderr!r}")
 
 
+def run_malformed_cli_preserves_result(executable):
+    with tempfile.TemporaryDirectory(
+            prefix="grasshopper3d-malformed-cli-") as directory:
+        working_directory = pathlib.Path(directory)
+        result_path = working_directory / "result.dat"
+        original_contents = "existing research result\n"
+        result_path.write_text(original_contents, encoding="utf-8")
+
+        completed = subprocess.run(
+            [str(executable), "-d", "not-a-number"],
+            cwd=working_directory,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        require(completed.returncode != 0, "malformed CLI input was accepted")
+        require(result_path.read_text(encoding="utf-8") == original_contents,
+                "malformed CLI input changed existing result.dat")
+
+
 def main():
     if len(sys.argv) != 2:
         print(f"usage: {pathlib.Path(sys.argv[0]).name} GRASSHOPPER_EXECUTABLE",
@@ -257,6 +278,9 @@ def main():
                 executable, 100, 1291, 0.1,
                 "Grid size is outside the supported flattened-index range.",
                 "grasshopper3d-grid-volume-")
+
+        with suite.case("malformed CLI preserves existing result.dat"):
+            run_malformed_cli_preserves_result(executable)
     except Exception as error:
         suite.failures.append(("integration test harness", error))
 

@@ -2,32 +2,6 @@
 
 using namespace std;
 
-double get_option(int inputN,char *inputV[], const char *was)
-	{
-	int n;
-	char option[20];
-	sprintf(option,"-%s",was);
-	for (n=1;n<(inputN-1);n++)
-		{
-		if (strcmp(inputV[n],option)==0)
-			return (double) atof(inputV[n+1]);
-		}
-	return 0;
-	}
-	
-string get_string_option(int inputN,char *inputV[], const char *was)
-	{
-	int n;
-	char option[20];
-	sprintf(option,"-%s",was);
-	for (n=1;n<(inputN-1);n++)
-		{
-		if (strcmp(inputV[n],option)==0)
-			return inputV[n+1];
-		}
-	return 0;
-	}
-
 bool isAround(double have, double comparewith)
 	{	
 	if(abs(have-comparewith)/cellSize<=2) return true;

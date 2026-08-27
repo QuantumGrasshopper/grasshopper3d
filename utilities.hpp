@@ -29,9 +29,6 @@ extern unsigned int gridVolume;
 extern double tempScaling;
 extern int deltaOption;
 
-double get_option(int inputN,char *inputV[], const char *was);
-std::string get_string_option(int inputN,char *inputV[], const char *was);
-
 bool isAround(double have, double comparewith);
 double contributionEnergy(double have, double comparewith);
 int xcoord(int gridPoint);
