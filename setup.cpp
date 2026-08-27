@@ -1,4 +1,5 @@
 #include "setup.hpp"
+#include "output.hpp"
 
 using namespace std;
 
@@ -53,10 +54,13 @@ void initRandom(unsigned char grid[], int spinArray[], gsl_rng *RNG)
 	}
 }
 
-void saveConfig(int *spinArray, ofstream &filename)
+void saveConfig(const int spinArray[], const string& filename)
 {
+	ofstream output;
+	openOutputFile(output,filename);
 	for (unsigned int i = 0; i < totalNumSpins; i++)
-		filename << spinArray[i] << endl;
+		output << spinArray[i] << '\n';
+	finishOutputFile(output,filename);
 }
 
 void initialize(unsigned char grid[], int spinArray[], gsl_rng *RNG, string initconf)
@@ -70,7 +74,6 @@ void initialize(unsigned char grid[], int spinArray[], gsl_rng *RNG, string init
 
 	if (!(initconf == "load"))
 	{
-		ofstream initconfout("initconf.dat");
-		saveConfig(spinArray, initconfout);
+		saveConfig(spinArray,"initconf.dat");
 	}
 }

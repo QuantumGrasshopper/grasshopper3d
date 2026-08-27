@@ -19,6 +19,7 @@ struct SimulationParameters {
     std::string initialConfiguration="random";
     int deltaOption=0;
     std::optional<unsigned long> randomSeed;
+    bool overwriteExistingOutputs=false;
 };
 
 SimulationParameters parseSimulationParameters(int argc, char* argv[]);

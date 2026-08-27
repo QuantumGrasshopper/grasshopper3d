@@ -3,9 +3,11 @@
 #include "annealing.hpp"
 #include "interactions.hpp"
 #include "parameters.hpp"
+#include "output.hpp"
 
 #include <cstdint>
 #include <limits>
+#include <sstream>
 
 unsigned int totalNumSpins;
 double cellSize;
@@ -91,7 +93,15 @@ int main(int inputN,char *inputV[]) {
 	if(parameters.randomSeed.has_value()) seed=*parameters.randomSeed;
     else seed=std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    ofstream result("result.dat");
+	vector<unsigned char> grid(gridVolume);			//true if spin=1 at this grid point
+	vector<int> spinArray(totalNumSpins);			 //grid point where any spin is
+	if(initconf=="load")
+		initLoad(grid.data(),spinArray.data());
+
+	prepareOutputFiles(parameters.overwriteExistingOutputs,initconf=="load");
+
+    ofstream result;
+	openOutputFile(result,"result.dat");
     
 	gsl_rng * RNG = gsl_rng_alloc (gsl_rng_mt19937);
 	gsl_rng_set (RNG, seed);
@@ -115,6 +125,7 @@ int main(int inputN,char *inputV[]) {
 	result << "Number of annealing steps: " << numberannealingsteps << endl;
 	result << "Initial number of steps before temperature scaling: " << temproundsteps << endl;
 	result << endl;
+	checkOutputStream(result,"result.dat","write");
 
     auto begin = chrono::high_resolution_clock::now();
     
@@ -126,14 +137,14 @@ int main(int inputN,char *inputV[]) {
     auto now = chrono::high_resolution_clock::now();
     auto timeDiff = chrono::duration_cast<chrono::milliseconds>(now-begin).count();
 	result << "Time to construct neighbors list: " << timeDiff << "ms" << endl;
+	checkOutputStream(result,"result.dat","write");
     
     // INITIAL SPIN CONFIGURATION ------------------------------------------------------------------------
-    
-    vector<unsigned char> grid(gridVolume);			//true if spin=1 at this grid point
-	vector<int> spinArray(totalNumSpins);				 //grid point where any spin is
+
 	vector<int> noSpinArray(gridVolume-totalNumSpins);	 //complementary to above: grid point where no spin is
 
-    initialize(grid.data(), spinArray.data(), RNG, initconf);
+	if(initconf!="load")
+		initialize(grid.data(),spinArray.data(),RNG,initconf);
     
     unsigned int noSpinCounter=0;
     for(unsigned int i=0;i<gridSize;i++) 
@@ -158,13 +169,25 @@ int main(int inputN,char *inputV[]) {
 
 	vector<double> energyGrid=buildGrasshopperInteractionGrid(grid.data(),interactionTemplate);
 	double energy=totalGrasshopperInteraction(grid.data(),energyGrid);
-		
-    ofstream energies("energies.dat");
-	ofstream temperatures("temperatures.dat");
-	energies << energy << endl;
-	ofstream configuration("config.dat");
-	for(unsigned int i=0;i<totalNumSpins;i++) configuration << spinArray[i] << " ";
-	configuration << energy << endl;
+
+    ofstream energies;
+	openOutputFile(energies,"energies.dat");
+	ofstream temperatures;
+	openOutputFile(temperatures,"temperatures.dat");
+	energies << energy << '\n';
+	checkOutputStream(energies,"energies.dat","write");
+
+	BoundedOutputFile configuration("config.dat",maximumConfigurationFileBytes);
+	auto buildConfigurationSnapshot=[&]()
+		{
+		ostringstream buffer;
+		setFullOutputPrecision(buffer);
+		for(unsigned int i=0;i<totalNumSpins;i++) buffer << spinArray[i] << " ";
+		buffer << energy << '\n';
+		return buffer.str();
+		};
+	bool configurationOutputEnabled=
+		configuration.writeIfFits(buildConfigurationSnapshot());
 	
 	vector<int> bestSpinArray(totalNumSpins);	//the overall best spin array during the whole run
 	for(unsigned int i=0;i<totalNumSpins;i++) bestSpinArray[i]=spinArray[i];
@@ -234,22 +257,26 @@ int main(int inputN,char *inputV[]) {
 			if(temperature>finaltemperature) 
 				{
 				temperature=temperatureDecrease(temperature);
-				if(annealingcounter%outputconfigbeforetherm==0) 
+				if(configurationOutputEnabled
+				   && annealingcounter%outputconfigbeforetherm==0)
 					{
-                    for(unsigned int i=0;i<totalNumSpins;i++) configuration << spinArray[i] << " "; 
-                    configuration << energy << endl;
-                    }
+					configurationOutputEnabled=
+						configuration.writeIfFits(buildConfigurationSnapshot());
+					}
 				annealingcounter++;
 				}
 			else if(annealingcounter<maxoutputconfigs)
 				{
-				annealingcounter++; 
-                for(unsigned int i=0;i<totalNumSpins;i++) configuration << spinArray[i] << " "; 
-                configuration << energy << endl;
+				annealingcounter++;
+				if(configurationOutputEnabled)
+					configurationOutputEnabled=
+						configuration.writeIfFits(buildConfigurationSnapshot());
 				}
 			accratio=accepted_current/double(temproundcounter);
-			temperatures << counter << '\t' << temperature << '\t' << accratio << endl;
-			energies << energy << endl;
+			temperatures << counter << '\t' << temperature << '\t' << accratio << '\n';
+			checkOutputStream(temperatures,"temperatures.dat","write");
+			energies << energy << '\n';
+			checkOutputStream(energies,"energies.dat","write");
 			accepted+=accepted_current; accepted_current=0;
 			temproundcounter=0;
 			temproundsteps=stepIncrease(temproundsteps);
@@ -274,13 +301,17 @@ int main(int inputN,char *inputV[]) {
 	result << "final energy: " << energy << endl;
 	result << "best energy: " << bestenergy << endl;
     result << "final probability: " << energy*probabilityNormFactor << endl;
-    result << "best probability: " << bestenergy*probabilityNormFactor << endl;
+	result << "best probability: " << bestenergy*probabilityNormFactor << endl;
 	result << endl;
-    
-    ofstream finconf("finconf.dat");
-    saveConfig(spinArray.data(), finconf);
-	ofstream bestconf("bestconf.dat");
-    saveConfig(bestSpinArray.data(), bestconf);
+	checkOutputStream(result,"result.dat","write");
+
+	finishOutputFile(energies,"energies.dat");
+	finishOutputFile(temperatures,"temperatures.dat");
+	configuration.finish();
+	finishOutputFile(result,"result.dat");
+
+    saveConfig(spinArray.data(),"finconf.dat");
+    saveConfig(bestSpinArray.data(),"bestconf.dat");
     
     return 0;
     }

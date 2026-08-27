@@ -47,12 +47,16 @@ TEST_CASE("Grasshopper3D parameter defaults are explicit")
     CHECK(parameters.initialConfiguration=="random");
     CHECK(parameters.deltaOption==0);
     CHECK_FALSE(parameters.randomSeed.has_value());
+    CHECK_FALSE(parameters.overwriteExistingOutputs);
+    CHECK_FALSE(parse({"grasshopper","-d","1","-overwrite","0"})
+                    .overwriteExistingOutputs);
     }
 
 TEST_CASE("Grasshopper3D parser accepts explicit options in arbitrary order")
     {
     const SimulationParameters parameters=parse({
         "grasshopper",
+        "-overwrite","1",
         "-randomseed","12345",
         "-delta","1",
         "-initconf","load",
@@ -82,6 +86,7 @@ TEST_CASE("Grasshopper3D parser accepts explicit options in arbitrary order")
     CHECK(parameters.deltaOption==1);
     REQUIRE(parameters.randomSeed.has_value());
     CHECK(*parameters.randomSeed==12345);
+    CHECK(parameters.overwriteExistingOutputs);
     }
 
 TEST_CASE("Grasshopper3D parser rejects structural command-line errors")
@@ -117,4 +122,5 @@ TEST_CASE("Grasshopper3D parser enforces option-specific values")
     checkRejected({"grasshopper","-d","1","-annealsteps","0"},"-annealsteps must be");
     checkRejected({"grasshopper","-d","1","-initconf","disk"},"-initconf must be exactly");
     checkRejected({"grasshopper","-d","1","-delta","2"},"-delta must be exactly");
+    checkRejected({"grasshopper","-d","1","-overwrite","2"},"-overwrite must be exactly");
     }

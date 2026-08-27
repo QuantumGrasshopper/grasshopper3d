@@ -4,6 +4,29 @@
 #include <cmath>
 #include <tuple>
 
+namespace {
+
+double symmetricKernelNormalization(int option)
+    {
+    cellSize=1.0;
+    deltaOption=option;
+    constexpr int intervals=200000;
+    constexpr double upperLimit=2.0;
+    const double step=upperLimit/intervals;
+    double weightedSum=contributionEnergy(0.0,0.0)
+                      +contributionEnergy(0.0,upperLimit);
+
+    for(int interval=1;interval<intervals;interval++)
+        {
+        const double value=contributionEnergy(0.0,interval*step);
+        weightedSum+=(interval%2==0 ? 2.0 : 4.0)*value;
+        }
+
+    return 2.0*step*weightedSum/3.0;
+    }
+
+} // namespace
+
 TEST_CASE("3D coordinate conversion and distance geometry") {
     cellSize = 0.25;
     gridSize = 4;
@@ -52,4 +75,13 @@ TEST_CASE("delta option one evaluates both analytic branches and compact support
     CHECK(contributionEnergy(0.0, 2.0) == 0.0);
     CHECK(contributionEnergy(0.0, 2.000001) == 0.0);
     CHECK(contributionEnergy(1.5, 0.0) == contributionEnergy(0.0, 1.5));
+}
+
+TEST_CASE("both radial kernels have unit symmetric normalization") {
+    for(int option : {0,1})
+        {
+        CAPTURE(option);
+        CHECK(symmetricKernelNormalization(option)
+              ==doctest::Approx(1.0).epsilon(1e-10));
+        }
 }

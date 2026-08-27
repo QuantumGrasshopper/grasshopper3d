@@ -21,7 +21,8 @@ const std::set<std::string> recognizedOptions{
     "-annealsteps",
     "-initconf",
     "-delta",
-    "-randomseed"
+    "-randomseed",
+    "-overwrite"
 };
 
 bool isRecognizedOption(const std::string& text)
@@ -176,6 +177,13 @@ SimulationParameters parseSimulationParameters(int argc, char* argv[])
             const unsigned long parsedSeed=parseUnsignedInteger<unsigned long>(value,option);
             if(parsedSeed==0) parameters.randomSeed.reset();
             else parameters.randomSeed=parsedSeed;
+            }
+        else if(option=="-overwrite")
+            {
+            const int parsedOverwrite=parseUnsignedInteger<int>(value,option);
+            if(parsedOverwrite!=0 && parsedOverwrite!=1)
+                throw std::invalid_argument("-overwrite must be exactly 0 or 1");
+            parameters.overwriteExistingOutputs=parsedOverwrite==1;
             }
         }
 
