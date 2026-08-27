@@ -2,7 +2,7 @@
 
 using namespace std;
 
-void initLoad(bool grid[], int spinArray[])
+void initLoad(unsigned char grid[], int spinArray[])
 {
 	ifstream initconfin("initconf.dat");
 	for (unsigned int i = 0; i < gridVolume; i++)
@@ -16,7 +16,7 @@ void initLoad(bool grid[], int spinArray[])
 	}
 }
 
-void initRandom(bool grid[], int spinArray[], gsl_rng *RNG)
+void initRandom(unsigned char grid[], int spinArray[], gsl_rng *RNG)
 {
 	for (unsigned int i = 0; i < gridVolume; i++)
 	{
@@ -44,7 +44,7 @@ void saveConfig(int *spinArray, ofstream &filename)
 		filename << spinArray[i] << endl;
 }
 
-void initialize(bool grid[], int spinArray[], gsl_rng *RNG, string initconf)
+void initialize(unsigned char grid[], int spinArray[], gsl_rng *RNG, string initconf)
 {
 	if (initconf == "random")
 		initRandom(grid, spinArray, RNG);
@@ -59,4 +59,3 @@ void initialize(bool grid[], int spinArray[], gsl_rng *RNG, string initconf)
 		saveConfig(spinArray, initconfout);
 	}
 }
-
