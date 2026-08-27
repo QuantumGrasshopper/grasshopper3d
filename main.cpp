@@ -2,6 +2,9 @@
 #include "setup.hpp"
 #include "annealing.hpp"
 
+#include <cstdint>
+#include <limits>
+
 unsigned int totalNumSpins;
 double cellSize;
 unsigned int gridSize;
@@ -17,6 +20,54 @@ struct gridcell {
     int z;
     double energy;    
 };
+
+namespace {
+
+unsigned int automaticGridSize(unsigned int numberSpins, double distance)
+    {
+    const double bulkHalfSize=trunc(pow(double(numberSpins),1./3.)+EPS);
+    const double interactionHalfSize=trunc(2*distance/cellSize+EPS);
+    const double automaticSize=2*bulkHalfSize+2*interactionHalfSize;
+
+    if(!isfinite(automaticSize) || automaticSize<1
+       || automaticSize>numeric_limits<unsigned int>::max())
+        throw invalid_argument("Automatically derived grid size is outside the supported range.");
+
+    return static_cast<unsigned int>(automaticSize);
+    }
+
+unsigned int checkedGridVolume(unsigned int inputGridSize)
+    {
+    if(inputGridSize==0)
+        throw invalid_argument("Grid size must be positive.");
+
+    const uint64_t side=inputGridSize;
+    const uint64_t maximumVolume=uint64_t(numeric_limits<int>::max())+1;
+
+    if(side>maximumVolume/side)
+        throw invalid_argument("Grid size is outside the supported flattened-index range.");
+    const uint64_t square=side*side;
+    if(square>maximumVolume/side)
+        throw invalid_argument("Grid size is outside the supported flattened-index range.");
+    const uint64_t volume=square*side;
+
+    if(volume>vector<double>().max_size())
+        throw invalid_argument("Grid volume is outside the supported storage range.");
+
+    return static_cast<unsigned int>(volume);
+    }
+
+void validateInteractionTemplateReach(double distance)
+    {
+    // The centered template must contain every displacement with
+    // |r-distance| < 2*cellSize. Its shorter reach controls both even and odd grids.
+    const unsigned int templateReach=(gridSize-1)/2;
+    const double requiredReach=ceil(distance/cellSize)+1.;
+    if(double(templateReach)<requiredReach)
+        throw invalid_argument("Grid size is too small for the requested interaction-distance support.");
+    }
+
+}
 
 int main(int inputN,char *inputV[]) {
     
@@ -49,8 +100,11 @@ int main(int inputN,char *inputV[]) {
 	int outputconfigbeforetherm=numberannealingsteps/100; int annealingcounter=0; int maxoutputconfigs=200;	//for output config dat
 	
 	cellSize = pow(1/double(totalNumSpins),1./3.);
-	if(gridSize<10) gridSize=2*int(pow(double(totalNumSpins),1./3.)+EPS)+2*int(2*d/cellSize+EPS);
-	gridVolume = gridSize*gridSize*gridSize;
+	if(gridSize<10) gridSize=automaticGridSize(totalNumSpins,d);
+	gridVolume = checkedGridVolume(gridSize);
+	if(totalNumSpins==0 || totalNumSpins>=gridVolume)
+		throw invalid_argument("Number of spins must satisfy 0 < N < grid volume.");
+	validateInteractionTemplateReach(d);
     // one factor of 1/2 is already taken care of by avoiding double counting
     double probabilityNormFactor = 1/2./PI/d/d/pow(double(totalNumSpins),5./3.);
     
@@ -84,8 +138,9 @@ int main(int inputN,char *inputV[]) {
     
     vector< gridcell > dNeighbourTemplate;
     
-    double thisEnergyContribution;    
-    tuple<int,int,int> centerPosition=make_tuple(gridSize/2,gridSize/2,gridSize/2);        
+    double thisEnergyContribution;
+    const int centerCoordinate=static_cast<int>(gridSize/2);
+    tuple<int,int,int> centerPosition=make_tuple(centerCoordinate,centerCoordinate,centerCoordinate);
     for(unsigned int i=0;i<gridSize;i++) 
         {
         for(unsigned int j=0;j<gridSize;j++)
@@ -96,9 +151,9 @@ int main(int inputN,char *inputV[]) {
                 if(thisEnergyContribution > EPS)
                     {
                     gridcell this_cell;
-                    this_cell.x = i-gridSize/2;
-                    this_cell.y = j-gridSize/2;
-                    this_cell.z = n-gridSize/2;
+                    this_cell.x = static_cast<int>(i)-centerCoordinate;
+                    this_cell.y = static_cast<int>(j)-centerCoordinate;
+                    this_cell.z = static_cast<int>(n)-centerCoordinate;
                     this_cell.energy = thisEnergyContribution;
                     dNeighbourTemplate.push_back(this_cell);
                     }
@@ -112,12 +167,12 @@ int main(int inputN,char *inputV[]) {
     
     // INITIAL SPIN CONFIGURATION ------------------------------------------------------------------------
     
-    bool grid[gridVolume];					//true if spin=1 at this grid point
-    double energyGrid[gridSize][gridSize][gridSize];
-	int spinArray[totalNumSpins];				 //grid point where any spin is
-	int noSpinArray[gridVolume-totalNumSpins];	 //complementary to above: grid point where no spin is
-    
-    initialize(grid, spinArray, RNG, initconf);
+    vector<unsigned char> grid(gridVolume);			//true if spin=1 at this grid point
+    vector<double> energyGrid(gridVolume);
+	vector<int> spinArray(totalNumSpins);				 //grid point where any spin is
+	vector<int> noSpinArray(gridVolume-totalNumSpins);	 //complementary to above: grid point where no spin is
+
+    initialize(grid.data(), spinArray.data(), RNG, initconf);
     
     unsigned int noSpinCounter=0;
     double energy = 0;
@@ -127,9 +182,10 @@ int main(int inputN,char *inputV[]) {
             {
             for(unsigned int n=0;n<gridSize;n++)
                 {
-                if(grid[getGridPoint(i,j,n)]==false) {noSpinArray[noSpinCounter]=i+gridSize*j+gridSize*gridSize*n; noSpinCounter++;}
+                const int gridPoint=getGridPoint(i,j,n);
+                if(grid[gridPoint]==false) {noSpinArray[noSpinCounter]=gridPoint; noSpinCounter++;}
                 // Fill the energy grid
-                energyGrid[i][j][n]=0;
+                energyGrid[gridPoint]=0;
                 for(unsigned int k=0;k<dNeighbourTemplate.size();k++)
                     {
                     int x = dNeighbourTemplate[k].x  +i;
@@ -138,10 +194,10 @@ int main(int inputN,char *inputV[]) {
                     if(x >= 0 && y >= 0 && z >=0 && x < gridSize && y < gridSize && z < gridSize)
                         {
                         if(grid[getGridPoint(x,y,z)]==true)
-                            {energyGrid[i][j][n]+=dNeighbourTemplate[k].energy;}
-                        }    
+                            {energyGrid[gridPoint]+=dNeighbourTemplate[k].energy;}
+                        }
                     }
-                if(grid[getGridPoint(i,j,n)]==true) energy += energyGrid[i][j][n];
+                if(grid[gridPoint]==true) energy += energyGrid[gridPoint];
                 }
             }
         }
@@ -154,7 +210,7 @@ int main(int inputN,char *inputV[]) {
 	for(unsigned int i=0;i<totalNumSpins;i++) configuration << spinArray[i] << " ";
 	configuration << energy << endl;
 	
-	int bestSpinArray[totalNumSpins];	//the overall best spin array during the whole run
+	vector<int> bestSpinArray(totalNumSpins);	//the overall best spin array during the whole run
 	for(unsigned int i=0;i<totalNumSpins;i++) bestSpinArray[i]=spinArray[i];
 	double bestenergy=energy;
 		
@@ -170,7 +226,7 @@ int main(int inputN,char *inputV[]) {
 		int create=gsl_rng_uniform_int (RNG, gridVolume-totalNumSpins);
 		int newSpinCoord=noSpinArray[create];
             
-        double energyDifference=energyGrid[xcoord(newSpinCoord)][ycoord(newSpinCoord)][zcoord(newSpinCoord)]-energyGrid[xcoord(oldSpinCoord)][ycoord(oldSpinCoord)][zcoord(oldSpinCoord)];
+        double energyDifference=energyGrid[newSpinCoord]-energyGrid[oldSpinCoord];
         if(isAround(d,euclideanDistance(findPosition(newSpinCoord),findPosition(oldSpinCoord))))//NOTE more efficient to keep this check explicit
             {
             energyDifference -= contributionEnergy(d,euclideanDistance( findPosition(newSpinCoord),findPosition(oldSpinCoord) ));
@@ -195,14 +251,14 @@ int main(int inputN,char *inputV[]) {
                 int z = dNeighbourTemplate[j].z  +zcoord(oldSpinCoord);
                 if(x >= 0 && y >= 0 && z >=0 && x < gridSize && y < gridSize && z < gridSize)
                     {
-                    energyGrid[x][y][z] -= dNeighbourTemplate[j].energy;
+                    energyGrid[getGridPoint(x,y,z)] -= dNeighbourTemplate[j].energy;
                     }
                 x = dNeighbourTemplate[j].x  +xcoord(newSpinCoord);
                 y = dNeighbourTemplate[j].y  +ycoord(newSpinCoord);
                 z = dNeighbourTemplate[j].z  +zcoord(newSpinCoord);
                 if(x >= 0 && y >= 0 && z >=0 && x < gridSize && y < gridSize && z < gridSize)
                     {
-                    energyGrid[x][y][z] += dNeighbourTemplate[j].energy;
+                    energyGrid[getGridPoint(x,y,z)] += dNeighbourTemplate[j].energy;
                     }
                 }
                 
@@ -260,9 +316,9 @@ int main(int inputN,char *inputV[]) {
 	result << endl;
     
     ofstream finconf("finconf.dat");
-    saveConfig(spinArray, finconf);
+    saveConfig(spinArray.data(), finconf);
 	ofstream bestconf("bestconf.dat");
-    saveConfig(bestSpinArray, bestconf);
+    saveConfig(bestSpinArray.data(), bestconf);
     
     return 0;
 }

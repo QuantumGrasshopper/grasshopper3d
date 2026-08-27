@@ -109,19 +109,46 @@ def require_current_precision(actual, expected, description):
             f"{description}: {actual:.17g} != {expected:.17g}")
 
 
-def run_probability_case(executable, delta_option):
-    total_spins = 100
-    grid_size = 10
-    hopping_distance = 0.5
-
-    # A centered 4 x 5 x 5 block. For these parameters, the template's
-    # four-cell reach contains the full compact support of both kernels.
-    coordinates = [
+def centered_block_coordinates(grid_size):
+    x_start = (grid_size - 4) // 2
+    y_start = (grid_size - 5) // 2
+    z_start = (grid_size - 5) // 2
+    return [
         z * grid_size * grid_size + y * grid_size + x
-        for z in range(2, 7)
-        for y in range(2, 7)
-        for x in range(3, 7)
+        for z in range(z_start, z_start + 5)
+        for y in range(y_start, y_start + 5)
+        for x in range(x_start, x_start + 4)
     ]
+
+
+def simulation_command(executable, total_spins, grid_size, hopping_distance,
+                       initialization, delta_option=0):
+    return [
+        str(executable),
+        "-N", str(total_spins),
+        "-gridsize", str(grid_size),
+        "-d", str(hopping_distance),
+        "-hours", "0",
+        "-steps", "1",
+        "-tempsteps", "10",
+        "-inittemp", "1",
+        "-fintemp", "0.1",
+        "-annealsteps", "100",
+        "-initconf", initialization,
+        "-delta", str(delta_option),
+        "-randomseed", "12345",
+    ]
+
+
+def run_probability_case(executable, grid_size, hopping_distance, delta_option):
+    total_spins = 100
+    cell_size = total_spins ** (-1.0 / 3.0)
+    template_reach = (grid_size - 1) // 2
+    required_reach = math.ceil(hopping_distance / cell_size) + 1
+    require(template_reach == required_reach,
+            "probability fixture is not at minimum valid template reach")
+
+    coordinates = centered_block_coordinates(grid_size)
     require(len(coordinates) == total_spins,
             "integration fixture has the wrong number of coordinates")
 
@@ -132,21 +159,9 @@ def run_probability_case(executable, delta_option):
             "".join(f"{coordinate}\n" for coordinate in coordinates),
             encoding="utf-8")
 
-        command = [
-            str(executable),
-            "-N", str(total_spins),
-            "-gridsize", str(grid_size),
-            "-d", str(hopping_distance),
-            "-hours", "0",
-            "-steps", "1",
-            "-tempsteps", "10",
-            "-inittemp", "1",
-            "-fintemp", "0.1",
-            "-annealsteps", "100",
-            "-initconf", "load",
-            "-delta", str(delta_option),
-            "-randomseed", "12345",
-        ]
+        command = simulation_command(
+            executable, total_spins, grid_size, hopping_distance,
+            "load", delta_option)
         completed = subprocess.run(
             command,
             cwd=working_directory,
@@ -187,6 +202,23 @@ def run_probability_case(executable, delta_option):
             "zero-step result probability")
 
 
+def run_rejection_case(executable, total_spins, grid_size, hopping_distance,
+                       expected_error, case_prefix):
+    with tempfile.TemporaryDirectory(prefix=case_prefix) as directory:
+        completed = subprocess.run(
+            simulation_command(
+                executable, total_spins, grid_size, hopping_distance, "random"),
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        require(completed.returncode != 0, "invalid geometry was not rejected")
+        require(expected_error in completed.stderr,
+                f"expected error {expected_error!r}; stderr was {completed.stderr!r}")
+
+
 def main():
     if len(sys.argv) != 2:
         print(f"usage: {pathlib.Path(sys.argv[0]).name} GRASSHOPPER_EXECUTABLE",
@@ -198,9 +230,33 @@ def main():
 
     try:
         require(executable.is_file(), f"executable not found: {executable}")
-        for delta_option in (0, 1):
-            with suite.case(f"loaded 3D probability with delta={delta_option}"):
-                run_probability_case(executable, delta_option)
+        reach_cases = (
+            ("minimum even template reach", 10, 0.5),
+            ("minimum odd template reach", 11, 0.75),
+        )
+        for reach_name, grid_size, hopping_distance in reach_cases:
+            for delta_option in (0, 1):
+                with suite.case(f"{reach_name}, delta={delta_option}"):
+                    run_probability_case(
+                        executable, grid_size, hopping_distance, delta_option)
+
+        with suite.case("undersized interaction-template reach"):
+            run_rejection_case(
+                executable, 100, 10, 0.75,
+                "Grid size is too small for the requested interaction-distance support.",
+                "grasshopper3d-undersized-reach-")
+
+        with suite.case("full grid occupancy"):
+            run_rejection_case(
+                executable, 1000, 10, 0.1,
+                "Number of spins must satisfy 0 < N < grid volume.",
+                "grasshopper3d-full-grid-")
+
+        with suite.case("grid volume outside flattened-index range"):
+            run_rejection_case(
+                executable, 100, 1291, 0.1,
+                "Grid size is outside the supported flattened-index range.",
+                "grasshopper3d-grid-volume-")
     except Exception as error:
         suite.failures.append(("integration test harness", error))
 
