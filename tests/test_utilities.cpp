@@ -2,6 +2,7 @@
 #include "utilities.hpp"
 
 #include <cmath>
+#include <initializer_list>
 #include <tuple>
 
 namespace {

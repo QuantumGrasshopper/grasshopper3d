@@ -1,22 +1,6 @@
 #pragma once
 
-#include <iostream>
-#include <fstream>
-#include <stdio.h>
-#include <math.h>
-#include <float.h>
-#include <cmath>
-#include <cstdlib>
-#include <cassert>
-#include <iomanip>
 #include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-#include <random>
-#include <string.h>
-#include <stdlib.h>
-#include <vector>
-#include <stdexcept>
-#include <bits/stdc++.h>
 #include <tuple>
 
 #define PI 3.14159265358979323846264338328 

@@ -1,5 +1,8 @@
 #include "utilities.hpp"
 
+#include <cmath>
+#include <stdexcept>
+
 using namespace std;
 
 bool isAround(double have, double comparewith)
@@ -29,31 +32,36 @@ double contributionEnergy(double have, double comparewith)
 	
 int xcoord(int gridPoint)
     {
-    return gridPoint%gridSize;
+    const int signedGridSize=static_cast<int>(gridSize);
+    return gridPoint%signedGridSize;
     }
     
 int ycoord(int gridPoint)
     {
     //return ((gridPoint-xcoord(gridPoint))/gridSize)%gridSize;
-    return gridPoint/gridSize-gridSize*zcoord(gridPoint);
+    const int signedGridSize=static_cast<int>(gridSize);
+    return gridPoint/signedGridSize-signedGridSize*zcoord(gridPoint);
     }
     
 int zcoord(int gridPoint)
     {
     //return (gridPoint - xcoord(gridPoint) - gridSize*ycoord(gridPoint))/gridSize/gridSize;
-    return gridPoint/gridSize/gridSize;
+    const int signedGridSize=static_cast<int>(gridSize);
+    return gridPoint/signedGridSize/signedGridSize;
     }
     
 int getGridPoint(int x, int y, int z)
     {
-    return z*gridSize*gridSize + y*gridSize + x;
+    const int signedGridSize=static_cast<int>(gridSize);
+    return z*signedGridSize*signedGridSize + y*signedGridSize + x;
     }
 
 tuple<double,double,double> findPosition(int gridPoint)
 	{
+    const int signedGridSize=static_cast<int>(gridSize);
     int z = zcoord(gridPoint);
-    int y = gridPoint/gridSize-gridSize*z;
-    int x = gridPoint - gridSize*gridSize*z - gridSize*y;
+    int y = gridPoint/signedGridSize-signedGridSize*z;
+    int x = gridPoint - signedGridSize*signedGridSize*z - signedGridSize*y;
         
 	tuple<double,double,double> thisPair(x*cellSize,y*cellSize,z*cellSize);
 	return thisPair;

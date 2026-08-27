@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <exception>
 #include <limits>
 #include <set>
 #include <stdexcept>

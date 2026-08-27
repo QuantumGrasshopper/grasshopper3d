@@ -1,6 +1,7 @@
 #include "interactions.hpp"
 #include "utilities.hpp"
 
+#include <cstddef>
 #include <cmath>
 #include <stdexcept>
 #include <tuple>
@@ -65,8 +66,9 @@ vector<double> buildGrasshopperInteractionGrid(
             for(int siteZ=0;siteZ<signedGridSize;siteZ++)
                 {
                 const int site=getGridPoint(siteX,siteY,siteZ);
-                interactionGrid[site]=0;
-                for(unsigned int neighbor=0;neighbor<interactionTemplate.size();neighbor++)
+                const size_t siteIndex=static_cast<size_t>(site);
+                interactionGrid[siteIndex]=0;
+                for(size_t neighbor=0;neighbor<interactionTemplate.size();neighbor++)
                     {
                     const int neighborX=siteX+interactionTemplate[neighbor].dx;
                     const int neighborY=siteY+interactionTemplate[neighbor].dy;
@@ -76,7 +78,7 @@ vector<double> buildGrasshopperInteractionGrid(
                        && neighborZ < signedGridSize)
                         {
                         if(grid[getGridPoint(neighborX,neighborY,neighborZ)]==true)
-                            interactionGrid[site]+=interactionTemplate[neighbor].contribution;
+                            interactionGrid[siteIndex]+=interactionTemplate[neighbor].contribution;
                         }
                     }
                 }
@@ -100,7 +102,8 @@ double totalGrasshopperInteraction(
             for(int z=0;z<signedGridSize;z++)
                 {
                 const int site=getGridPoint(x,y,z);
-                if(grid[site]==true) interaction+=interactionGrid[site];
+                if(grid[site]==true)
+                    interaction+=interactionGrid[static_cast<size_t>(site)];
                 }
             }
         }

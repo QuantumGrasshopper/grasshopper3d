@@ -5,9 +5,17 @@
 #include "parameters.hpp"
 #include "output.hpp"
 
+#include <chrono>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <fstream>
+#include <iostream>
 #include <limits>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 unsigned int totalNumSpins;
 double cellSize;
@@ -86,12 +94,13 @@ int main(int inputN,char *inputV[]) {
 	if(totalNumSpins==0 || totalNumSpins>=gridVolume)
 		throw invalid_argument("Number of spins must satisfy 0 < N < grid volume.");
 	validateInteractionTemplateReach(d);
+	const int signedGridSize=static_cast<int>(gridSize);
     // one factor of 1/2 is already taken care of by avoiding double counting
     double probabilityNormFactor = 1/2./PI/d/d/pow(double(totalNumSpins),5./3.);
 
 	long unsigned int seed;
 	if(parameters.randomSeed.has_value()) seed=*parameters.randomSeed;
-    else seed=std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    else seed=static_cast<unsigned long>(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 
 	vector<unsigned char> grid(gridVolume);			//true if spin=1 at this grid point
 	vector<int> spinArray(totalNumSpins);			 //grid point where any spin is
@@ -106,9 +115,11 @@ int main(int inputN,char *inputV[]) {
 	gsl_rng * RNG = gsl_rng_alloc (gsl_rng_mt19937);
 	gsl_rng_set (RNG, seed);
 	
-	unsigned int temproundcounter=0;
+	unsigned long temproundcounter=0;
 	double accratio;
-    long unsigned int counter=0; long accepted=0; long accepted_current=0;
+	unsigned long counter=0;
+	unsigned long accepted=0;
+	unsigned long accepted_current=0;
 
     result << "3D Grasshopper with Simulated Annealing, Euclidean metric" << endl;
 	result << endl;
@@ -132,7 +143,6 @@ int main(int inputN,char *inputV[]) {
     // CONSTRUCT NEIGHBOR TEMPLATE ---------------------------------------------------------------------------  
     
 	GrasshopperInteractionTemplate interactionTemplate=buildInteractionTemplate(d);
-	const int signedGridSize=static_cast<int>(gridSize);
 		
     auto now = chrono::high_resolution_clock::now();
     auto timeDiff = chrono::duration_cast<chrono::milliseconds>(now-begin).count();
@@ -146,15 +156,15 @@ int main(int inputN,char *inputV[]) {
 	if(initconf!="load")
 		initialize(grid.data(),spinArray.data(),RNG,initconf);
     
-    unsigned int noSpinCounter=0;
-    for(unsigned int i=0;i<gridSize;i++) 
+    size_t noSpinCounter=0;
+    for(int i=0;i<signedGridSize;i++)
         {
-        for(unsigned int j=0;j<gridSize;j++)
+        for(int j=0;j<signedGridSize;j++)
             {
-            for(unsigned int n=0;n<gridSize;n++)
+            for(int n=0;n<signedGridSize;n++)
                 {
                 const int gridPoint=getGridPoint(i,j,n);
-                if(grid[gridPoint]==false)
+                if(grid[static_cast<size_t>(gridPoint)]==false)
                     {
                     if(noSpinCounter>=noSpinArray.size())
                         throw logic_error("Initialization produced an incorrect number of empty grid cells.");
@@ -195,17 +205,18 @@ int main(int inputN,char *inputV[]) {
 		
     // MAIN LOOP ------------------------------------------------------------------------------------------
 		
-    while( (timeDiff<maxtime) && (counter<maxsteps) )
+    while( (static_cast<double>(timeDiff)<maxtime) && (counter<maxsteps) )
         {
 		counter++; temproundcounter++;
 		
         // MC update
-		int destroy=gsl_rng_uniform_int (RNG, totalNumSpins);
+		size_t destroy=static_cast<size_t>(gsl_rng_uniform_int (RNG, totalNumSpins));
 		int oldSpinCoord=spinArray[destroy];
-		int create=gsl_rng_uniform_int (RNG, gridVolume-totalNumSpins);
+		size_t create=static_cast<size_t>(gsl_rng_uniform_int (RNG, gridVolume-totalNumSpins));
 		int newSpinCoord=noSpinArray[create];
             
-        double energyDifference=energyGrid[newSpinCoord]-energyGrid[oldSpinCoord];
+        double energyDifference=energyGrid[static_cast<size_t>(newSpinCoord)]
+            -energyGrid[static_cast<size_t>(oldSpinCoord)];
         if(isAround(d,euclideanDistance(findPosition(newSpinCoord),findPosition(oldSpinCoord))))//NOTE more efficient to keep this check explicit
             {
             energyDifference -= contributionEnergy(d,euclideanDistance( findPosition(newSpinCoord),findPosition(oldSpinCoord) ));
@@ -217,13 +228,13 @@ int main(int inputN,char *inputV[]) {
 		
 		if(accept==true)
 			{       
-            grid[oldSpinCoord]=false; 
-            grid[newSpinCoord]=true;        
+            grid[static_cast<size_t>(oldSpinCoord)]=false;
+            grid[static_cast<size_t>(newSpinCoord)]=true;
 			spinArray[destroy]=newSpinCoord; noSpinArray[create]=oldSpinCoord;
 			energy+=energyDifference;
         
             //update energy grid                
-            for(unsigned int j=0;j<interactionTemplate.size();j++)
+            for(size_t j=0;j<interactionTemplate.size();j++)
                 {
                 int x = interactionTemplate[j].dx+xcoord(oldSpinCoord);
                 int y = interactionTemplate[j].dy+ycoord(oldSpinCoord);
@@ -231,7 +242,7 @@ int main(int inputN,char *inputV[]) {
                 if(x >= 0 && y >= 0 && z >=0
                    && x < signedGridSize && y < signedGridSize && z < signedGridSize)
                     {
-                    energyGrid[getGridPoint(x,y,z)] -= interactionTemplate[j].contribution;
+                    energyGrid[static_cast<size_t>(getGridPoint(x,y,z))] -= interactionTemplate[j].contribution;
                     }
                 x = interactionTemplate[j].dx+xcoord(newSpinCoord);
                 y = interactionTemplate[j].dy+ycoord(newSpinCoord);
@@ -239,7 +250,7 @@ int main(int inputN,char *inputV[]) {
                 if(x >= 0 && y >= 0 && z >=0
                    && x < signedGridSize && y < signedGridSize && z < signedGridSize)
                     {
-                    energyGrid[getGridPoint(x,y,z)] += interactionTemplate[j].contribution;
+                    energyGrid[static_cast<size_t>(getGridPoint(x,y,z))] += interactionTemplate[j].contribution;
                     }
                 }
                 
@@ -272,7 +283,7 @@ int main(int inputN,char *inputV[]) {
 					configurationOutputEnabled=
 						configuration.writeIfFits(buildConfigurationSnapshot());
 				}
-			accratio=accepted_current/double(temproundcounter);
+			accratio=static_cast<double>(accepted_current)/double(temproundcounter);
 			temperatures << counter << '\t' << temperature << '\t' << accratio << '\n';
 			checkOutputStream(temperatures,"temperatures.dat","write");
 			energies << energy << '\n';
@@ -288,12 +299,12 @@ int main(int inputN,char *inputV[]) {
 		
     // WRAP UP --------------------------------------------------------------------------------------------
 
-	const long totalAccepted=accepted+accepted_current;
+	const unsigned long totalAccepted=accepted+accepted_current;
 	const double averageAcceptanceRatio=
-		counter>0 ? totalAccepted/double(counter) : 0.0;
+		counter>0 ? static_cast<double>(totalAccepted)/double(counter) : 0.0;
     
     result << endl;
-	result << "Simulation took " << timeDiff/60./1000 << " minutes" << endl;
+	result << "Simulation took " << static_cast<double>(timeDiff)/60./1000 << " minutes" << endl;
 	result << "Finished after " << counter << " steps" << endl;
 	result << "Final temperature: " << temperature << endl;
 	result << "Average acceptance ratio: " << averageAcceptanceRatio << endl;

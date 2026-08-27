@@ -1,5 +1,11 @@
 #include "setup.hpp"
 #include "output.hpp"
+#include "utilities.hpp"
+
+#include <fstream>
+#include <ios>
+#include <stdexcept>
+#include <string>
 
 using namespace std;
 
@@ -38,7 +44,7 @@ void initRandom(unsigned char grid[], int spinArray[], gsl_rng *RNG)
 	{
 		grid[i] = false;
 	}
-	int newSpinCoord;
+	unsigned long newSpinCoord;
 	unsigned int spincounter = 0;
 	while (spincounter < totalNumSpins)
 	{
@@ -49,7 +55,7 @@ void initRandom(unsigned char grid[], int spinArray[], gsl_rng *RNG)
 			create = grid[newSpinCoord];
 		}
 		grid[newSpinCoord] = true;
-		spinArray[spincounter] = newSpinCoord;
+		spinArray[spincounter] = static_cast<int>(newSpinCoord);
 		spincounter++;
 	}
 }

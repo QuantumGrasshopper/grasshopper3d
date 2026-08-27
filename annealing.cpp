@@ -1,4 +1,5 @@
 #include "annealing.hpp"
+#include "utilities.hpp"
 
 #include <cmath>
 #include <limits>

@@ -1,12 +1,10 @@
 
 # declare variables
-CXX = g++
-#CXX = clang++-9
-LD = $(CXX)
-# CXXFLAGS = -g -pg -O1 -Wall -std=c++17
-# LDFLAGS = -g -pg -lgsl -lgslcblas -lm
-CXXFLAGS = -O3 -Wall -std=c++17
-LDFLAGS = -lgsl -lgslcblas -lm
+CXX ?= g++
+CPPFLAGS ?=
+CXXFLAGS ?= -O3 -Wall -Wextra -std=c++17
+LDFLAGS ?=
+LDLIBS ?= -lgsl -lgslcblas -lm
 PYTHON ?= python3
 
 OBJS = main.o utilities.o interactions.o parameters.o setup.o annealing.o output.o
@@ -23,29 +21,29 @@ TEST_PRODUCTION_OBJS = utilities.o parameters.o setup.o annealing.o output.o
 
 # link .o-files to program
 grasshopper:  $(OBJS)
-	$(LD) $(OBJS) -o grasshopper $(LDFLAGS)
+	$(CXX) $(LDFLAGS) $(OBJS) -o grasshopper $(LDLIBS)
 
 $(TEST_BIN): $(TEST_OBJS) $(TEST_PRODUCTION_OBJS)
-	$(LD) $(TEST_OBJS) $(TEST_PRODUCTION_OBJS) -o $(TEST_BIN) $(LDFLAGS)
+	$(CXX) $(LDFLAGS) $(TEST_OBJS) $(TEST_PRODUCTION_OBJS) -o $(TEST_BIN) $(LDLIBS)
 
-# create .o-files from .cpp-files using g++
+# create .o-files from .cpp-files
 main.o: main.cpp utilities.hpp setup.hpp annealing.hpp interactions.hpp parameters.hpp output.hpp
-	$(CXX) $(CXXFLAGS) -c main.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c main.cpp
 utilities.o: utilities.cpp utilities.hpp
-	$(CXX) $(CXXFLAGS) -c utilities.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c utilities.cpp
 interactions.o: interactions.cpp interactions.hpp utilities.hpp
-	$(CXX) $(CXXFLAGS) -c interactions.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c interactions.cpp
 parameters.o: parameters.cpp parameters.hpp
-	$(CXX) $(CXXFLAGS) -c parameters.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c parameters.cpp
 setup.o: setup.cpp setup.hpp utilities.hpp output.hpp
-	$(CXX) $(CXXFLAGS) -c setup.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c setup.cpp
 annealing.o: annealing.cpp annealing.hpp utilities.hpp
-	$(CXX) $(CXXFLAGS) -c annealing.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c annealing.cpp
 output.o: output.cpp output.hpp
-	$(CXX) $(CXXFLAGS) -c output.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c output.cpp
 
 tests/%.o: tests/%.cpp tests/doctest/doctest.h utilities.hpp parameters.hpp setup.hpp annealing.hpp output.hpp
-	$(CXX) $(CXXFLAGS) -I. -Itests -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I. -Itests -c $< -o $@
 
 test: $(TEST_BIN)
 	./$(TEST_BIN)
