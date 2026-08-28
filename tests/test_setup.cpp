@@ -8,8 +8,10 @@
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -64,6 +66,49 @@ void configureLoadTest()
     gridVolume=8;
     tempScaling=1.0;
     deltaOption=0;
+    }
+
+void configureBallTest(unsigned int spins, unsigned int size)
+    {
+    totalNumSpins=spins;
+    cellSize=1.0;
+    gridSize=size;
+    gridVolume=gridSize*gridSize*gridSize;
+    tempScaling=1.0;
+    deltaOption=0;
+    }
+
+uint64_t squaredDistanceFromCenter(unsigned int gridPoint)
+    {
+    const uint64_t planeSize=static_cast<uint64_t>(gridSize)*gridSize;
+    const int64_t x=gridPoint%gridSize;
+    const int64_t y=(gridPoint/gridSize)%gridSize;
+    const int64_t z=gridPoint/planeSize;
+    const int64_t doubledCenter=static_cast<int64_t>(gridSize)-1;
+    const int64_t dx=2*x-doubledCenter;
+    const int64_t dy=2*y-doubledCenter;
+    const int64_t dz=2*z-doubledCenter;
+    return static_cast<uint64_t>(dx*dx+dy*dy+dz*dz);
+    }
+
+void checkBallConfiguration(const std::vector<unsigned char>& grid,
+                            const std::vector<int>& spins)
+    {
+    REQUIRE(grid.size()==gridVolume);
+    REQUIRE(spins.size()==totalNumSpins);
+    CHECK(std::is_sorted(spins.begin(),spins.end()));
+
+    const std::set<int> uniqueSpins(spins.begin(),spins.end());
+    CHECK(uniqueSpins.size()==totalNumSpins);
+    CHECK(std::count(grid.begin(),grid.end(),static_cast<unsigned char>(1))
+          ==static_cast<std::ptrdiff_t>(totalNumSpins));
+
+    for(int spin : spins)
+        {
+        REQUIRE(spin>=0);
+        REQUIRE(spin<static_cast<int>(gridVolume));
+        CHECK(grid[static_cast<size_t>(spin)]==1);
+        }
     }
 
 void writeInitialConfiguration(const std::string& contents)
@@ -147,4 +192,76 @@ TEST_CASE("configuration loading rejects a missing file")
     CHECK_THROWS_WITH_AS(initLoad(grid.data(),spins.data()),
                          "Error: Cannot open initconf.dat for reading.",
                          std::runtime_error);
+    }
+
+TEST_CASE("ball initialization selects the center and six axial neighbors on an odd grid")
+    {
+    configureBallTest(7,5);
+    std::vector<unsigned char> grid(gridVolume);
+    std::vector<int> spins(totalNumSpins);
+
+    initBall(grid.data(),spins.data());
+
+    checkBallConfiguration(grid,spins);
+    CHECK(spins==std::vector<int>{37,57,61,62,63,67,87});
+    }
+
+TEST_CASE("ball initialization selects the central block on an even grid")
+    {
+    configureBallTest(8,4);
+    std::vector<unsigned char> grid(gridVolume);
+    std::vector<int> spins(totalNumSpins);
+
+    initBall(grid.data(),spins.data());
+
+    checkBallConfiguration(grid,spins);
+    CHECK(spins==std::vector<int>{21,22,25,26,37,38,41,42});
+    }
+
+TEST_CASE("partial ball shells use a deterministic nearest-site tie break")
+    {
+    configureBallTest(4,5);
+    std::vector<unsigned char> firstGrid(gridVolume);
+    std::vector<unsigned char> secondGrid(gridVolume);
+    std::vector<int> firstSpins(totalNumSpins);
+    std::vector<int> secondSpins(totalNumSpins);
+
+    initBall(firstGrid.data(),firstSpins.data());
+    initBall(secondGrid.data(),secondSpins.data());
+
+    checkBallConfiguration(firstGrid,firstSpins);
+    checkBallConfiguration(secondGrid,secondSpins);
+    CHECK(firstGrid==secondGrid);
+    CHECK(firstSpins==secondSpins);
+    CHECK(firstSpins==std::vector<int>{37,57,61,62});
+
+    uint64_t maximumSelectedDistance=0;
+    uint64_t minimumUnselectedDistance=std::numeric_limits<uint64_t>::max();
+    for(unsigned int gridPoint=0;gridPoint<gridVolume;gridPoint++)
+        {
+        const uint64_t distance=squaredDistanceFromCenter(gridPoint);
+        if(firstGrid[gridPoint])
+            maximumSelectedDistance=std::max(maximumSelectedDistance,distance);
+        else
+            minimumUnselectedDistance=std::min(minimumUnselectedDistance,distance);
+        }
+    CHECK(maximumSelectedDistance<=minimumUnselectedDistance);
+    }
+
+TEST_CASE("the initialization path saves a generated ball without using the RNG")
+    {
+    configureBallTest(2,3);
+    ScopedTemporaryDirectory temporaryDirectory;
+    std::vector<unsigned char> grid(gridVolume);
+    std::vector<int> spins(totalNumSpins);
+
+    initialize(grid.data(),spins.data(),nullptr,"ball");
+
+    checkBallConfiguration(grid,spins);
+    std::ifstream savedConfiguration("initconf.dat");
+    REQUIRE(savedConfiguration.is_open());
+    std::vector<int> savedSpins;
+    int savedSpin;
+    while(savedConfiguration>>savedSpin) savedSpins.push_back(savedSpin);
+    CHECK(savedSpins==spins);
     }

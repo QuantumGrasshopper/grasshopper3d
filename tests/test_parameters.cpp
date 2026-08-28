@@ -53,6 +53,8 @@ TEST_CASE("Grasshopper3D parameter defaults are explicit")
     CHECK_FALSE(parameters.overwriteExistingOutputs);
     CHECK_FALSE(parse({"grasshopper","-d","1","-overwrite","0"})
                     .overwriteExistingOutputs);
+    CHECK(parse({"grasshopper","-d","1","-initconf","ball"})
+          .initialConfiguration=="ball");
     }
 
 TEST_CASE("Grasshopper3D parser accepts explicit options in arbitrary order")

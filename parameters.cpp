@@ -166,8 +166,8 @@ SimulationParameters parseSimulationParameters(int argc, char* argv[])
             parameters.annealingSteps=parsePositiveInt(value,option);
         else if(option=="-initconf")
             {
-            if(value!="random" && value!="load")
-                throw std::invalid_argument("-initconf must be exactly random or load");
+            if(value!="random" && value!="load" && value!="ball")
+                throw std::invalid_argument("-initconf must be exactly random, load, or ball");
             parameters.initialConfiguration=value;
             }
         else if(option=="-delta")

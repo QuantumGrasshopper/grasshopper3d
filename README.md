@@ -61,7 +61,7 @@ The code uses the following command-line options:
 | `-inittemp`     | initial temperature (20 by default) |
 | `-fintemp`      | final temperature (0.1 by default; need to run long enough to reach it) |
 | `-annealsteps`  | number of simulated annealing steps between initial and final temperature (1000 by default) |
-| `-initconf`     | how to initialise the system: currently implemented: `random` (default), or `load` (load configuration from file called `initconf.dat`) |
+| `-initconf`     | how to initialise the system: `random` (default), `load` (load configuration from `initconf.dat`), or `ball` (a deterministic discrete ball formed from the `N` sites nearest the grid center) |
 | `-delta`        | choice of delta-function discretization: exactly `0` (default) or `1`; see Goulko and Kent (2017) for their definitions |
 | `-randomseed`   | unsigned initial value for the random number generator (if omitted or set to `0`, a seed is generated from the system clock) |
 | `-overwrite`    | output overwrite policy: exactly `0` (default, reject if an output artifact exists) or `1` (remove old output artifacts before starting) |
