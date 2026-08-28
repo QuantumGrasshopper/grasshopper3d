@@ -1,4 +1,5 @@
 #include "doctest/doctest.h"
+#include "interactions.hpp"
 #include "utilities.hpp"
 
 #include <cmath>
