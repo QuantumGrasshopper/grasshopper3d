@@ -1,18 +1,34 @@
-name: Makefile CI
+name: CI
 
 on:
   push:
-    branches: [ "main", "devel", "devel-olga" ]
   pull_request:
-    branches: [ "main", "devel" ]
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: GCC
+            compiler: g++
+            package: g++
+          - name: Clang
+            compiler: clang++
+            package: clang
 
+    name: ${{ matrix.name }}
     steps:
-    - uses: actions/checkout@v3
+      - name: Check out repository
+        uses: actions/checkout@v7
 
-    - name: Compile code
-      run: make
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libgsl-dev ${{ matrix.package }}
+
+      - name: Build and test
+        run: make CXX=${{ matrix.compiler }} -B check
