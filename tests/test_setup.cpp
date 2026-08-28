@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Olga Goulko and David Llamas
+
 #include "doctest/doctest.h"
 #include "setup.hpp"
 #include "utilities.hpp"

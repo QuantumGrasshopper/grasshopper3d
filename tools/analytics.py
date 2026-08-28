@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Olga Goulko and David Llamas
+
 import numpy as np
 from scipy.integrate import quad
 from scipy.optimize import minimize

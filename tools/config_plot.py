@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Olga Goulko and David Llamas
 
 import numpy as np
 import matplotlib.pyplot as plt

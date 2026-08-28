@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Olga Goulko and David Llamas
+
 import numpy as np
 import matplotlib.pyplot as plt
 from analytics import optimal_r_inner, r0, shell_prob
