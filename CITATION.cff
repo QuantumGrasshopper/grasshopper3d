@@ -1,0 +1,60 @@
+cff-version: 1.2.0
+message: "If you use this software in published work, please cite this software release and the papers listed under references."
+title: "Grasshopper3D"
+type: software
+authors:
+  - family-names: "Goulko"
+    given-names: "Olga"
+  - family-names: "Llamas"
+    given-names: "David"
+abstract: >-
+  Grasshopper3D is a C++ implementation of simulated annealing for the
+  three dimensional Euclidean grasshopper problem on a cubic grid. It searches for
+  unit-volume lawn configurations that maximize the discretized grasshopper
+  success probability for a fixed jump distance.
+version: "1.0.0"
+license: GPL-3.0-or-later
+repository-code: "https://github.com/QuantumGrasshopper/grasshopper3d"
+keywords:
+  - grasshopper problem
+  - simulated annealing
+  - computational physics
+  - statistical physics
+  - optimization
+  - fixed-distance interactions
+references:
+  - type: article
+    authors:
+      - family-names: "Llamas"
+        given-names: "David"
+      - family-names: "Kent-Dobias"
+        given-names: "Jaron"
+      - family-names: "Chen"
+        given-names: "Kun"
+      - family-names: "Kent"
+        given-names: "Adrian"
+      - family-names: "Goulko"
+        given-names: "Olga"
+    title: "Origin of symmetry breaking in the grasshopper model"
+    journal: "Physical Review Research"
+    volume: 6
+    issue: 2
+    year: 2024
+    doi: "10.1103/PhysRevResearch.6.023235"
+    url: "https://arxiv.org/abs/2311.05023"
+    scope: "Studies symmetry breaking and dimensionality in the grasshopper model, including the three-dimensional Euclidean case implemented by this software."
+
+  - type: article
+    authors:
+      - family-names: "Goulko"
+        given-names: "Olga"
+      - family-names: "Kent"
+        given-names: "Adrian"
+    title: "The grasshopper problem"
+    journal: "Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences"
+    volume: 473
+    issue: 2207
+    year: 2017
+    doi: "10.1098/rspa.2017.0494"
+    url: "https://arxiv.org/abs/1705.07621"
+    scope: "Introduces the planar grasshopper problem and the numerical algorithm on which this software is based."

@@ -11,12 +11,12 @@ struct SimulationParameters {
         : hoppingDistance(requiredHoppingDistance) {}
 
     double hoppingDistance;
-    unsigned int totalNumSpins=5000;
+    unsigned int totalNumSpins=10000;
     std::optional<unsigned int> gridSize;
     double hours=0.0;
     unsigned long maxSteps=1000000000000UL;
     std::optional<unsigned long> temperatureRoundSteps; // initial number of proposals between cooling updates
-    double initialTemperature=25.0;
+    double initialTemperature=20.0;
     double finalTemperature=0.1;
     int annealingSteps=1000;                             // number of cooling steps from initial to final temperature
     std::string initialConfiguration="random";
