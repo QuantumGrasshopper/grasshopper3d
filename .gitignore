@@ -26,3 +26,7 @@ grasshopper
 /tests/grasshopper_tests
 runs/
 /benchmarks/
+
+# Python cache files
+__pycache__/
+*.py[cod]
