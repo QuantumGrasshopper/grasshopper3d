@@ -11,6 +11,8 @@ abstract: >-
   unit-volume lawn configurations that maximize the discretized grasshopper
   success probability for a fixed jump distance.
 version: "1.0.0"
+date-released: "2026-08-28"
+doi: "10.5281/zenodo.22149997"
 license: GPL-3.0-or-later
 repository-code: "https://github.com/QuantumGrasshopper/grasshopper3d"
 keywords:

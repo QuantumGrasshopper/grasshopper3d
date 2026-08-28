@@ -1,5 +1,7 @@
 # Grasshopper3D
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22149997.svg)](https://doi.org/10.5281/zenodo.22149997)
+
 Grasshopper3D is a C++ implementation of simulated annealing for the three dimensional Euclidean grasshopper problem on a cubic grid. The lawn has unit volume and is represented by `N` occupied grid cells. The code searches for configurations that maximize the discretized grasshopper success probability for a fixed jump distance `d`.
 
 ## Citation
