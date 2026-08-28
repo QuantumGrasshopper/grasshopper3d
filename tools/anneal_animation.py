@@ -34,8 +34,7 @@ def animation_function(i):
     ax.set_xlim3d(0,gridsize)
     ax.set_ylim3d(0,gridsize)
     ax.set_zlim3d(0,gridsize)
-    extents = np.maximum((np.ptp(x), np.ptp(y), np.ptp(z)), 1)
-    ax.set_box_aspect(extents)
+    ax.set_box_aspect((1,1,1))
     ax.view_init(elev=30, azim=45)
     ax.scatter(x, y, z, c=z, cmap='viridis')
 

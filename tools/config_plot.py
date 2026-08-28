@@ -26,6 +26,10 @@ x = data - y*gridsize - z*gridsize*gridsize
 
 fig = plt.figure()
 ax = plt.axes(projection='3d')
+ax.set_xlim3d(0,gridsize)
+ax.set_ylim3d(0,gridsize)
+ax.set_zlim3d(0,gridsize)
+ax.set_box_aspect((1,1,1))
 ax.scatter(x, y, z, c=z, cmap='viridis')
 
 plt.show()
