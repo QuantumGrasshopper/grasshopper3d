@@ -2,17 +2,21 @@
 
 import numpy as np
 import matplotlib.pyplot as plt 
-from mpl_toolkits import mplot3d
 import matplotlib.animation as anim
-import plotly.graph_objects as go
 
 # generate animation of simulated annealing using saved configuration sequence
 
-data = np.genfromtxt("config.dat", dtype = int)
+def read_result_value(label, value_type):
+    with open("result.dat") as f:
+        for line in f:
+            key, separator, value = line.partition(":")
+            if separator and key.strip() == label:
+                return value_type(value.strip())
+    raise ValueError(f"Could not find '{label}' in result.dat")
 
-with open("result.dat") as f:
-    lines = f.readlines()
-    gridsize = int(lines[4].strip().split(" ")[-1])
+gridsize = read_result_value("Size of grid", int)
+
+data = np.atleast_2d(np.loadtxt("config.dat", dtype=float))
 
 fig = plt.figure()
 ax = plt.axes(projection='3d',elev=30, azim=45)
@@ -21,15 +25,17 @@ numframes = len(data)
 
 def animation_function(i):
     ax.cla()
-    row = data[i,:-1]    # last element is energy
-    z = row//gridsize//gridsize
-    y = row//gridsize - z*gridsize
-    x = row - y*gridsize - z*gridsize*gridsize
+    row = data[i]
+    coordinates = row[:-1].astype(int)    # last element is raw energy
+    z = coordinates//gridsize//gridsize
+    y = coordinates//gridsize - z*gridsize
+    x = coordinates - y*gridsize - z*gridsize*gridsize
     
     ax.set_xlim3d(0,gridsize)
     ax.set_ylim3d(0,gridsize)
     ax.set_zlim3d(0,gridsize)
-    ax.set_box_aspect((np.ptp(x), np.ptp(y), np.ptp(z)))
+    extents = np.maximum((np.ptp(x), np.ptp(y), np.ptp(z)), 1)
+    ax.set_box_aspect(extents)
     ax.view_init(elev=30, azim=45)
     ax.scatter(x, y, z, c=z, cmap='viridis')
 

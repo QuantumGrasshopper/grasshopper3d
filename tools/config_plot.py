@@ -2,18 +2,22 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits import mplot3d
 
 # quick plot saved spin configuration
 # no transparency, cannot see inside configuration
 
+def read_result_value(label, value_type):
+    with open("result.dat") as f:
+        for line in f:
+            key, separator, value = line.partition(":")
+            if separator and key.strip() == label:
+                return value_type(value.strip())
+    raise ValueError(f"Could not find '{label}' in result.dat")
+
+gridsize = read_result_value("Size of grid", int)
+
 inputfile = input("Name of file containing spin configuration: ")
-
-data = np.genfromtxt(inputfile, dtype = int)
-
-with open("result.dat") as f:
-    lines = f.readlines()
-    gridsize = int(lines[4].strip().split(" ")[-1])
+data = np.loadtxt(inputfile, dtype = int)
 
 z = data//gridsize//gridsize
 y = data//gridsize - z*gridsize
