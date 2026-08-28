@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Olga Goulko and David Llamas
+# Copyright (C) 2026 Olga Goulko
 
 import numpy as np
 from analytics import exact_ball_prob, optimal_r_inner, r0, r_outer, shell_prob

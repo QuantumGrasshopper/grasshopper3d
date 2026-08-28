@@ -5,8 +5,6 @@ type: software
 authors:
   - family-names: "Goulko"
     given-names: "Olga"
-  - family-names: "Llamas"
-    given-names: "David"
 abstract: >-
   Grasshopper3D is a C++ implementation of simulated annealing for the
   three dimensional Euclidean grasshopper problem on a cubic grid. It searches for
