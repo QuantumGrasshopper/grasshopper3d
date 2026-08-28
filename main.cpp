@@ -196,17 +196,17 @@ int main(int inputN,char *inputV[]) {
 	openOutputFile(energies,"energies.dat");
 	ofstream temperatures;
 	openOutputFile(temperatures,"temperatures.dat");
-	energies << energy << '\n';
+	energies << energy*probabilityNormFactor << '\n';
 	checkOutputStream(energies,"energies.dat","write");
 
 	BoundedOutputFile configuration("config.dat",maximumConfigurationFileBytes);
-	// Each config.dat row contains N flattened coordinates followed by the raw pair energy.
+	// Each config.dat row contains N flattened coordinates followed by the grasshopper success probability.
 	auto buildConfigurationSnapshot=[&]()
 		{
 		ostringstream buffer;
 		setFullOutputPrecision(buffer);
 		for(unsigned int i=0;i<totalNumSpins;i++) buffer << spinArray[i] << " ";
-		buffer << energy << '\n';
+		buffer << energy*probabilityNormFactor << '\n';
 		return buffer.str();
 		};
 	bool configurationOutputEnabled=
@@ -305,7 +305,7 @@ int main(int inputN,char *inputV[]) {
 			accratio=static_cast<double>(accepted_current)/double(temproundcounter);
 			temperatures << counter << '\t' << temperature << '\t' << accratio << '\n';
 			checkOutputStream(temperatures,"temperatures.dat","write");
-			energies << energy << '\n';
+			energies << energy*probabilityNormFactor << '\n';
 			checkOutputStream(energies,"energies.dat","write");
 			accepted+=accepted_current; accepted_current=0;
 			temproundcounter=0;

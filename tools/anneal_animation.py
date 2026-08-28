@@ -28,7 +28,7 @@ numframes = len(data)
 def animation_function(i):
     ax.cla()
     row = data[i]
-    coordinates = row[:-1].astype(int)    # last element is raw energy
+    coordinates = row[:-1].astype(int)    # last element is grasshopper probability
     z = coordinates//gridsize//gridsize
     y = coordinates//gridsize - z*gridsize
     x = coordinates - y*gridsize - z*gridsize*gridsize

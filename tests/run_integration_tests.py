@@ -200,7 +200,7 @@ def run_probability_case(executable, grid_size, hopping_distance, delta_option):
         reference_probability = normalized_probability(
             reference_energy, hopping_distance, total_spins)
 
-        initial_energy = float(
+        initial_probability = float(
             (working_directory / "energies.dat")
             .read_text(encoding="utf-8").splitlines()[0])
         configuration_values = (
@@ -208,18 +208,20 @@ def run_probability_case(executable, grid_size, hopping_distance, delta_option):
             .read_text(encoding="utf-8").splitlines()[0].split())
         require(len(configuration_values) == total_spins + 1,
                 "initial config.dat row has the wrong number of fields")
-        configuration_energy = float(configuration_values[-1])
+        configuration_probability = float(configuration_values[-1])
         reported_energy = float(result_values["final energy"])
         reported_probability = float(result_values["final probability"])
         reported_acceptance = float(result_values["Average acceptance ratio"])
 
         require_full_precision(
-            initial_energy, reference_energy, "initial reported energy")
+            initial_probability, reference_probability,
+            "initial probability in energies.dat")
         require_full_precision(
-            configuration_energy, reference_energy,
-            "raw energy in initial config.dat row")
+            configuration_probability, reference_probability,
+            "probability in initial config.dat row")
         require_full_precision(
-            reported_energy, reference_energy, "zero-step result energy")
+            reported_energy, reference_energy,
+            "zero-step result energy")
         require_full_precision(
             reported_probability, reference_probability,
             "zero-step result probability")

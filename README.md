@@ -79,9 +79,11 @@ file name          | comment
 `initconf.dat`     | initial spin configuration; with `-initconf load`, this is an input and is never removed or overwritten
 `finconf.dat`      | final spin configuration
 `bestconf.dat`     | best configuration over the whole run
-`energies.dat`     | every annealing round prints the current raw pair energy
+`energies.dat`     | every annealing round prints the current grasshopper success probability
 `temperatures.dat` | every annealing round prints the counter, the current temperature, and the current acceptance ratio
-`config.dat`       | stores selected spin configurations and raw energies across the annealing trajectory for animation or analysis; output is capped at 100 MB
+`config.dat`       | stores selected spin configurations and their grasshopper success probabilities across the annealing trajectory for animation or analysis; output is capped at 100 MiB
+
+The raw pair energy \(E\) counts each occupied pair once; the corresponding grasshopper success probability is \(P=E/(2\pi d^2N^{5/3})\).
 
 By default, a run is rejected before creating files if any standard output file listed above already exists. With `-overwrite 1`, the complete standard output set is removed before the run. The only exception is `initconf.dat` with `-initconf load`, which is preserved as the run's input. A cleanup error aborts the run before simulation output begins.
 

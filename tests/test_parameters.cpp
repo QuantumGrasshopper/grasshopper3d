@@ -39,12 +39,12 @@ TEST_CASE("Grasshopper3D parameter defaults are explicit")
     const SimulationParameters parameters=parse({"grasshopper","-d","0.5"});
 
     CHECK(parameters.hoppingDistance==doctest::Approx(0.5));
-    CHECK(parameters.totalNumSpins==5000);
+    CHECK(parameters.totalNumSpins==10000);
     CHECK_FALSE(parameters.gridSize.has_value());
     CHECK(parameters.hours==0.0);
     CHECK(parameters.maxSteps==1000000000000UL);
     CHECK_FALSE(parameters.temperatureRoundSteps.has_value());
-    CHECK(parameters.initialTemperature==25.0);
+    CHECK(parameters.initialTemperature==20.0);
     CHECK(parameters.finalTemperature==0.1);
     CHECK(parameters.annealingSteps==1000);
     CHECK(parameters.initialConfiguration=="random");
