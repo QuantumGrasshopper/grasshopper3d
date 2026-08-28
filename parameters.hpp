@@ -12,12 +12,12 @@ struct SimulationParameters {
     std::optional<unsigned int> gridSize;
     double hours=0.0;
     unsigned long maxSteps=1000000000000UL;
-    std::optional<unsigned long> temperatureRoundSteps;
+    std::optional<unsigned long> temperatureRoundSteps; // initial number of proposals between cooling updates
     double initialTemperature=25.0;
     double finalTemperature=0.1;
-    int annealingSteps=1000;
+    int annealingSteps=1000;                             // number of cooling steps from initial to final temperature
     std::string initialConfiguration="random";
-    int deltaOption=0;
+    int deltaOption=0;                                   // selects one of the two delta-function discretizations
     std::optional<unsigned long> randomSeed;
     bool overwriteExistingOutputs=false;
 };

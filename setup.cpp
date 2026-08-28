@@ -11,14 +11,18 @@ using namespace std;
 
 void initLoad(unsigned char grid[], int spinArray[])
 {
+	// Load the initial configuration file.
 	ifstream initconfin("initconf.dat");
 	if(!initconfin.is_open())
 		throw runtime_error("Error: Cannot open initconf.dat for reading.");
 
+	// Prepare the occupancy grid.
 	for (unsigned int i = 0; i < gridVolume; i++)
 	{
 		grid[i] = false;
 	}
+	// Read exactly totalNumSpins unique flattened coordinates and validate
+	// them against the current grid.
 	for (unsigned int i = 0; i < totalNumSpins; i++)
 	{
 		long long coordinate;
@@ -33,6 +37,7 @@ void initLoad(unsigned char grid[], int spinArray[])
 		grid[spinArray[i]]=true;
 	}
 
+	// Reject trailing data after the expected coordinates.
 	initconfin >> ws;
 	if(initconfin.peek()!=char_traits<char>::eof())
 		throw runtime_error("Error: initconf.dat contains more data than expected.");
@@ -40,6 +45,7 @@ void initLoad(unsigned char grid[], int spinArray[])
 
 void initRandom(unsigned char grid[], int spinArray[], gsl_rng *RNG)
 {
+	// Random initialization with exactly totalNumSpins distinct occupied cells.
 	for (unsigned int i = 0; i < gridVolume; i++)
 	{
 		grid[i] = false;

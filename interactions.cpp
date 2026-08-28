@@ -11,8 +11,7 @@ using namespace std;
 
 void validateInteractionTemplateReach(double distance)
     {
-    // The centered template must contain every displacement with
-    // |r-distance| < 2*cellSize. Its shorter reach controls both even and odd grids.
+    // The centered template must contain every displacement with |r-distance| < 2*cellSize
     const unsigned int templateReach=(gridSize-1)/2;
     const double requiredReach=ceil(distance/cellSize)+1.;
     if(double(templateReach)<requiredReach)
@@ -23,6 +22,8 @@ GrasshopperInteractionTemplate buildInteractionTemplate(double distance)
     {
     validateInteractionTemplateReach(distance);
 
+    // Build one template around the grid center. It stores only relative 3D
+    // offsets with nonzero contributions, rather than a full translated table.
     GrasshopperInteractionTemplate interactionTemplate;
     const int signedGridSize=static_cast<int>(gridSize);
     const int centerCoordinate=signedGridSize/2;
@@ -56,9 +57,13 @@ GrasshopperInteractionTemplate buildInteractionTemplate(double distance)
 vector<double> buildGrasshopperInteractionGrid(
     const unsigned char grid[], const GrasshopperInteractionTemplate& interactionTemplate)
     {
+    // interactionGrid[i] = sum_j s_j w(i,j) for every grid site i,
+    // including empty sites.
     vector<double> interactionGrid(gridVolume);
     const int signedGridSize=static_cast<int>(gridSize);
 
+    // Translate the relative template to each site. Off-grid translations are
+    // omitted, implementing open rather than periodic boundaries.
     for(int siteX=0;siteX<signedGridSize;siteX++)
         {
         for(int siteY=0;siteY<signedGridSize;siteY++)
@@ -94,7 +99,7 @@ double totalGrasshopperInteraction(
     double interaction=0;
     const int signedGridSize=static_cast<int>(gridSize);
 
-    // Preserve the original x/y/z summation order.
+    // order is retained for floating-point reproducibility
     for(int x=0;x<signedGridSize;x++)
         {
         for(int y=0;y<signedGridSize;y++)
@@ -107,6 +112,6 @@ double totalGrasshopperInteraction(
                 }
             }
         }
-
+    // Summing the cached field over occupied sites counts every occupied pair twice.
     return interaction/2.;
     }

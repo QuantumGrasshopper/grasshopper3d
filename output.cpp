@@ -28,7 +28,7 @@ void prepareOutputFiles(bool overwrite, bool preserveInitialConfiguration)
     {
     vector<string> existingOutputFiles;
 
-    // Inspect the complete output set before removing anything.
+    // First inspect the complete output set without changing anything.
     for(const char* filename : outputFiles)
         {
         if(preserveInitialConfiguration && string(filename)=="initconf.dat") continue;
@@ -51,6 +51,7 @@ void prepareOutputFiles(bool overwrite, bool preserveInitialConfiguration)
         existingOutputFiles.push_back(filename);
         }
 
+    // Only start removing files after the complete preflight succeeded.
     for(const string& filename : existingOutputFiles)
         {
         error_code error;

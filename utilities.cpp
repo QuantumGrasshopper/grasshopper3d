@@ -6,11 +6,15 @@
 using namespace std;
 
 bool isAround(double have, double comparewith)
-	{	
+	{
+    /// Tests whether two physical lengths differ by at most two cell widths,
+	/// which is the compact support of the smeared radial delta function.
 	if(abs(have-comparewith)/cellSize<=2) return true;
 	else return false;
 	}
 	
+/// Grasshopper interaction contribution using the globally selected deltaOption
+/// The inputs are the distance between two points and the interaction distance (in any order)
 double contributionEnergy(double have, double comparewith)
 	{
 	double contribution=0;
@@ -32,20 +36,19 @@ double contributionEnergy(double have, double comparewith)
 	
 int xcoord(int gridPoint)
     {
+    // Flattened coordinates use index = z*gridSize^2 + y*gridSize + x.
     const int signedGridSize=static_cast<int>(gridSize);
     return gridPoint%signedGridSize;
     }
     
 int ycoord(int gridPoint)
     {
-    //return ((gridPoint-xcoord(gridPoint))/gridSize)%gridSize;
     const int signedGridSize=static_cast<int>(gridSize);
     return gridPoint/signedGridSize-signedGridSize*zcoord(gridPoint);
     }
     
 int zcoord(int gridPoint)
     {
-    //return (gridPoint - xcoord(gridPoint) - gridSize*ycoord(gridPoint))/gridSize/gridSize;
     const int signedGridSize=static_cast<int>(gridSize);
     return gridPoint/signedGridSize/signedGridSize;
     }

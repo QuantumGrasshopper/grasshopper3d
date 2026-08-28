@@ -30,6 +30,7 @@ namespace {
 
 unsigned int automaticGridSize(unsigned int numberSpins, double distance)
     {
+	// If no explicit gridSize is supplied, choose a generous default box to reduce effects of artificial open boundaries
     const double bulkHalfSize=trunc(pow(double(numberSpins),1./3.)+EPS);
     const double interactionHalfSize=trunc(2*distance/cellSize+EPS);
     const double automaticSize=2*bulkHalfSize+2*interactionHalfSize;
@@ -46,6 +47,8 @@ unsigned int checkedGridVolume(unsigned int inputGridSize)
     if(inputGridSize==0)
         throw invalid_argument("Grid size must be positive.");
 
+    // Compute gridSize^3 in a wide type before narrowing, and require every
+    // valid flattened coordinate to remain representable by the int-based helpers.
     const uint64_t side=inputGridSize;
     const uint64_t maximumVolume=uint64_t(numeric_limits<int>::max())+1;
 
@@ -85,7 +88,8 @@ int main(int inputN,char *inputV[]) {
 	tempScaling=pow((finaltemperature/temperature),1./double(numberannealingsteps));
 	int outputconfigbeforetherm=numberannealingsteps/100;
 	if(outputconfigbeforetherm<1) outputconfigbeforetherm=1;
-	int annealingcounter=0; int maxoutputconfigs=200;	//for output config dat
+	// Snapshot scheduling for config.dat; BoundedOutputFile enforces a separate byte-size cap.
+	int annealingcounter=0; int maxoutputconfigs=200;
 	
 	cellSize = pow(1/double(totalNumSpins),1./3.);
 	if(parameters.gridSize.has_value()) gridSize=*parameters.gridSize;
@@ -95,15 +99,18 @@ int main(int inputN,char *inputV[]) {
 		throw invalid_argument("Number of spins must satisfy 0 < N < grid volume.");
 	validateInteractionTemplateReach(d);
 	const int signedGridSize=static_cast<int>(gridSize);
-    // one factor of 1/2 is already taken care of by avoiding double counting
+    // Raw energy counts each occupied pair once. The corresponding
+	// grasshopper success probability is P = E/(2*pi*d^2*N^(5/3)).
     double probabilityNormFactor = 1/2./PI/d/d/pow(double(totalNumSpins),5./3.);
 
+	// Use the system clock if no random seed was supplied; the selected seed is always output.
 	long unsigned int seed;
 	if(parameters.randomSeed.has_value()) seed=*parameters.randomSeed;
     else seed=static_cast<unsigned long>(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 
 	vector<unsigned char> grid(gridVolume);			//true if spin=1 at this grid point
-	vector<int> spinArray(totalNumSpins);			 //grid point where any spin is
+	vector<int> spinArray(totalNumSpins);			//grid point where any spin is
+	// Validate a loaded configuration before existing output artifacts can be removed.
 	if(initconf=="load")
 		initLoad(grid.data(),spinArray.data());
 
@@ -177,6 +184,8 @@ int main(int inputN,char *inputV[]) {
 	if(noSpinCounter!=noSpinArray.size())
 		throw logic_error("Initialization produced an incorrect number of empty grid cells.");
 
+	// energyGrid[i] is the interaction contribution of a hypothetical spin at i
+	// with the current occupied set, whether site i is occupied or empty.
 	vector<double> energyGrid=buildGrasshopperInteractionGrid(grid.data(),interactionTemplate);
 	double energy=totalGrasshopperInteraction(grid.data(),energyGrid);
 
@@ -188,6 +197,7 @@ int main(int inputN,char *inputV[]) {
 	checkOutputStream(energies,"energies.dat","write");
 
 	BoundedOutputFile configuration("config.dat",maximumConfigurationFileBytes);
+	// Each config.dat row contains N flattened coordinates followed by the raw pair energy.
 	auto buildConfigurationSnapshot=[&]()
 		{
 		ostringstream buffer;
@@ -210,6 +220,7 @@ int main(int inputN,char *inputV[]) {
 		counter++; temproundcounter++;
 		
         // MC update
+        // Choose one filled site and one empty site.
 		size_t destroy=static_cast<size_t>(gsl_rng_uniform_int (RNG, totalNumSpins));
 		int oldSpinCoord=spinArray[destroy];
 		size_t create=static_cast<size_t>(gsl_rng_uniform_int (RNG, gridVolume-totalNumSpins));
@@ -217,6 +228,8 @@ int main(int inputN,char *inputV[]) {
             
         double energyDifference=energyGrid[static_cast<size_t>(newSpinCoord)]
             -energyGrid[static_cast<size_t>(oldSpinCoord)];
+		// The cached field at the new site may include its interaction with the
+		// still-occupied old site; subtract that pair because the old site will be emptied.
         if(isAround(d,euclideanDistance(findPosition(newSpinCoord),findPosition(oldSpinCoord))))//NOTE more efficient to keep this check explicit
             {
             energyDifference -= contributionEnergy(d,euclideanDistance( findPosition(newSpinCoord),findPosition(oldSpinCoord) ));
@@ -228,12 +241,14 @@ int main(int inputN,char *inputV[]) {
 		
 		if(accept==true)
 			{       
+			// Update the occupied and empty site lists.
             grid[static_cast<size_t>(oldSpinCoord)]=false;
             grid[static_cast<size_t>(newSpinCoord)]=true;
 			spinArray[destroy]=newSpinCoord; noSpinArray[create]=oldSpinCoord;
 			energy+=energyDifference;
         
-            //update energy grid                
+            // Update the cached field: remove the old site's contribution from
+            // every affected value, then add the new site's contribution.
             for(size_t j=0;j<interactionTemplate.size();j++)
                 {
                 int x = interactionTemplate[j].dx+xcoord(oldSpinCoord);
@@ -255,6 +270,7 @@ int main(int inputN,char *inputV[]) {
                 }
                 
 			accepted_current++;
+			// Keep track of the optimal configuration and its pair energy.
 			if(energy>bestenergy)
 				{
                 bestenergy=energy; 
