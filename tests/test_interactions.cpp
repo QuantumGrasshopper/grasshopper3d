@@ -5,6 +5,7 @@
 #include <cmath>
 #include <initializer_list>
 #include <tuple>
+#include <vector>
 
 namespace {
 
@@ -85,5 +86,52 @@ TEST_CASE("both radial kernels have unit symmetric normalization") {
         CAPTURE(option);
         CHECK(symmetricKernelNormalization(option)
               ==doctest::Approx(1.0).epsilon(1e-10));
+        }
+}
+
+TEST_CASE("grasshopper energy difference agrees with full recomputation") {
+    totalNumSpins = 4;
+    cellSize = 0.25;
+    gridSize = 12;
+    gridVolume = 1728;
+    tempScaling = 1.0;
+
+    const double distance = 1.0;
+
+    std::vector<unsigned char> grid(gridVolume, false);
+    grid[getGridPoint(0,0,0)] = true;
+    grid[getGridPoint(6,6,6)] = true;
+    grid[getGridPoint(10,6,6)] = true;
+    grid[getGridPoint(6,10,6)] = true;
+
+    const int oldCell = getGridPoint(10,6,6);
+    const int newCell = getGridPoint(6,2,6);
+
+    for(int option : {0,1})
+        {
+        CAPTURE(option);
+        deltaOption = option;
+
+        const auto interactionTemplate = buildInteractionTemplate(distance);
+        const auto interactionGrid = buildGrasshopperInteractionGrid(grid.data(), interactionTemplate);
+
+        const double energyBefore = totalGrasshopperInteraction(grid.data(), interactionGrid);
+
+        double energyDifference = interactionGrid[newCell] - interactionGrid[oldCell];
+
+        const double moveDistance = euclideanDistance(findPosition(newCell), findPosition(oldCell));
+
+        if(isAround(distance, moveDistance))
+            energyDifference -= contributionEnergy(distance, moveDistance);
+
+        auto movedGrid = grid;
+        movedGrid[oldCell] = false;
+        movedGrid[newCell] = true;
+
+        const auto movedInteractionGrid = buildGrasshopperInteractionGrid(movedGrid.data(), interactionTemplate);
+
+        const double energyAfter = totalGrasshopperInteraction(movedGrid.data(), movedInteractionGrid);
+
+        CHECK(energyAfter == doctest::Approx(energyBefore + energyDifference).epsilon(1e-12));
         }
 }
